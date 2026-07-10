@@ -4,13 +4,17 @@ on:
   push:
     paths:
       - ".github/workflows/test.yml"
+      - "app/run-test.sh"
       - "app/tests/**"
       - "app/src/**"
+      - "app/include/**"
   pull_request:
     paths:
       - ".github/workflows/test.yml"
+      - "app/run-test.sh"
       - "app/tests/**"
       - "app/src/**"
+      - "app/include/**"
 
 jobs:
   collect-tests:
@@ -19,13 +23,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       - name: Find test directories
         id: test-dirs
         run: |
           cd app/tests/
-          export TESTS=$(ls -d * | jq -R -s -c 'split("\n")[:-1]')
-          echo "::set-output name=test-dirs::${TESTS}"
+          export TESTS=$(ls -d * | grep -v ble | jq -R -s -c 'split("\n")[:-1]')
+          echo "test-dirs=${TESTS}" >> $GITHUB_OUTPUT
   run-tests:
     needs: collect-tests
     strategy:
@@ -33,12 +37,12 @@ jobs:
         test: ${{ fromJSON(needs.collect-tests.outputs.test-dirs) }}
     runs-on: ubuntu-latest
     container:
-      image: docker.io/zmkfirmware/zmk-build-arm:3.2
+      image: docker.io/zmkfirmware/zmk-build-arm:4.1
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
       - name: Cache west modules
-        uses: actions/cache@v3.0.2
+        uses: actions/cache@v5
         env:
           cache-name: cache-zephyr-modules
         with:
@@ -57,15 +61,15 @@ jobs:
       - name: Initialize workspace (west init)
         run: west init -l app
       - name: Update modules (west update)
-        run: west update
+        run: west update --fetch-opt=--filter=tree:0
       - name: Export Zephyr CMake package (west zephyr-export)
         run: west zephyr-export
       - name: Test ${{ matrix.test }}
         working-directory: app
-        run: west test tests/${{ matrix.test }}
+        run: ZMK_TESTS_VERBOSE=1 west test tests/${{ matrix.test }}
       - name: Archive artifacts
         if: ${{ always() }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v7
         with:
-          name: "log-files"
+          name: "${{ matrix.test }}-log-files"
           path: app/build/**/*.log

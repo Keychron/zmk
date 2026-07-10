@@ -6,11 +6,17 @@
 
 #include <dt-bindings/zmk/matrix_transform.h>
 
+#include <layouts/josefadamcik/sofle.dtsi>
+
+&josefadamcik_sofle_layout {
+    transform = <&default_transform>;
+};
+
 / {
 
     chosen {
         zephyr,display = &oled;
-        zmk,matrix_transform = &default_transform;
+        zmk,physical-layout = &josefadamcik_sofle_layout;
     };
 
     default_transform: keymap_transform_0 {
@@ -33,7 +39,6 @@ RC(3,0) RC(3,1) RC(3,2) RC(3,3) RC(3,4) RC(3,5) RC(4,5) RC(4,6) RC(3,6) RC(3,7) 
 
     left_encoder: left_encoder {
         compatible = "alps,ec11";
-        label = "L_ENCODER";
         steps = <144>;
         status = "disabled";
 
@@ -43,7 +48,6 @@ RC(3,0) RC(3,1) RC(3,2) RC(3,3) RC(3,4) RC(3,5) RC(4,5) RC(4,6) RC(3,6) RC(3,7) 
 
     right_encoder: right_encoder {
         compatible = "alps,ec11";
-        label = "R_ENCODER";
         steps = <144>;
         status = "disabled";
 
@@ -51,7 +55,7 @@ RC(3,0) RC(3,1) RC(3,2) RC(3,3) RC(3,4) RC(3,5) RC(4,5) RC(4,6) RC(3,6) RC(3,7) 
         b-gpios = <&pro_micro 10 GPIO_PULL_UP>;
     };
 
-    sensors {
+    sensors: sensors {
         compatible = "zmk,keymap-sensors";
         sensors = <&left_encoder &right_encoder>;
         triggers-per-rotation = <36>;
@@ -64,7 +68,6 @@ RC(3,0) RC(3,1) RC(3,2) RC(3,3) RC(3,4) RC(3,5) RC(4,5) RC(4,6) RC(3,6) RC(3,7) 
     oled: ssd1306@3c {
         compatible = "solomon,ssd1306fb";
         reg = <0x3c>;
-        label = "DISPLAY";
         width = <128>;
         height = <32>;
         segment-offset = <0>;
@@ -74,6 +77,7 @@ RC(3,0) RC(3,1) RC(3,2) RC(3,3) RC(3,4) RC(3,5) RC(4,5) RC(4,6) RC(3,6) RC(3,7) 
         segment-remap;
         com-invdir;
         com-sequential;
+        inversion-on;
         prechargep = <0x22>;
     };
 };

@@ -6,11 +6,15 @@
 
 #include "kyria_common.dtsi"
 
-/ {
-    chosen {
-        zmk,matrix_transform = &default_transform;
-    };
+&splitkb_kyria_6col_layout {
+    transform = <&default_transform>;
+};
 
+&splitkb_kyria_5col_layout {
+    status = "disabled";
+};
+
+/ {
     default_transform: keymap_transform_0 {
         compatible = "zmk,matrix-transform";
         columns = <14>;
@@ -29,13 +33,11 @@
 };
 
 &left_encoder {
-    resolution = <2>;
     a-gpios = <&pro_micro 20 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
     b-gpios = <&pro_micro 21 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
 };
 
 &right_encoder {
-    resolution = <2>;
     a-gpios = <&pro_micro 20 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
     b-gpios = <&pro_micro 21 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
 };

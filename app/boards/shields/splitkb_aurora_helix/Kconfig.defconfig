@@ -16,19 +16,12 @@ if SHIELD_SPLITKB_AURORA_HELIX_LEFT || SHIELD_SPLITKB_AURORA_HELIX_RIGHT
 config ZMK_SPLIT
     default y
 
-config ZMK_RGB_UNDERGLOW
-    select WS2812_STRIP
-    select SPI
-
 if ZMK_DISPLAY
 
 config SSD1306
     default y
 
 config I2C
-    default y
-
-config SSD1306_REVERSE_MODE
     default y
 
 endif # ZMK_DISPLAY

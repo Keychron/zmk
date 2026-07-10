@@ -6,30 +6,30 @@
 
 #include <dt-bindings/zmk/matrix_transform.h>
 
+#include "kyria-layouts.dtsi"
+
 / {
     chosen {
         zephyr,display = &oled;
         zmk,kscan = &kscan0;
-        zmk,matrix_transform = &default_transform;
+        zmk,physical-layout = &splitkb_kyria_6col_layout;
     };
 
     kscan0: kscan {
         compatible = "zmk,kscan-gpio-matrix";
-        label = "KSCAN";
+        wakeup-source;
 
         diode-direction = "col2row";
     };
 
     left_encoder: encoder_left {
         compatible = "alps,ec11";
-        label = "LEFT_ENCODER";
         steps = <80>;
         status = "disabled";
     };
 
     right_encoder: encoder_right {
         compatible = "alps,ec11";
-        label = "RIGHT_ENCODER";
         steps = <80>;
         status = "disabled";
     };
@@ -49,7 +49,6 @@
     oled: ssd1306@3c {
         compatible = "solomon,ssd1306fb";
         reg = <0x3c>;
-        label = "DISPLAY";
         width = <128>;
         height = <64>;
         segment-offset = <0>;
@@ -57,5 +56,6 @@
         display-offset = <0>;
         multiplex-ratio = <63>;
         prechargep = <0x22>;
+        inversion-on;
     };
 };

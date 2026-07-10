@@ -8,12 +8,19 @@
 
 /**
  * The method by which data is sent.
+ * @note This type is used in settings. Do not modify existing values.
  */
 enum zmk_transport {
+<<<<<<< HEAD
     ZMK_TRANSPORT_USB,
     ZMK_TRANSPORT_BLE,
     ZMK_TRANSPORT_24G,
     ZMK_TRANSPORT_NONE
+=======
+    ZMK_TRANSPORT_NONE = 0,
+    ZMK_TRANSPORT_USB = 1,
+    ZMK_TRANSPORT_BLE = 2,
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 };
 
 /**

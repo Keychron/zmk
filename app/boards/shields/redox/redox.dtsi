@@ -5,11 +5,17 @@
  */
 
 #include <dt-bindings/zmk/matrix_transform.h>
+#include "redox-layouts.dtsi"
+
+
+&redox_physical_layout {
+    transform = <&default_transform>;
+};
 
 / {
     chosen {
         zmk,kscan = &kscan0;
-        zmk,matrix_transform = &default_transform;
+        zmk,physical-layout = &redox_physical_layout;
     };
 
     default_transform: keymap_transform_0 {
@@ -32,7 +38,7 @@ RC(4,0) RC(4,1) RC(4,2) RC(4,3)      RC(4,4)    RC(4,5) RC(4,6) RC(4,7) RC(4,8) 
 
     kscan0: kscan {
         compatible = "zmk,kscan-gpio-matrix";
-        label = "KSCAN";
+        wakeup-source;
 
         diode-direction = "col2row";
         row-gpios

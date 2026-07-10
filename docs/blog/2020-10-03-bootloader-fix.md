@@ -1,9 +1,6 @@
 ---
 title: Fixing the Mysterious Broken Bootloader
-author: Nick Winans
-author_title: Contributor
-author_url: https://github.com/Nicell
-author_image_url: https://avatars1.githubusercontent.com/u/9439650
+authors: nickwinans
 tags: [bootloader, keyboards, firmware, oss, ble]
 ---
 
@@ -11,6 +8,8 @@ Recently I was able to fix the "stuck in the bootloader" issue in
 [#322](https://github.com/zmkfirmware/zmk/pull/322) that had been plaguing us
 for quite some time. I want to go over what the issue was, how the issue was
 diagnosed, and how it was fixed.
+
+<!-- truncate -->
 
 ## Background
 
@@ -176,7 +175,6 @@ this to all of the `.dts` files for the boards that were affected by this issue.
 
 ```diff
         code_partition: partition@26000 {
-            label = "code_partition";
 -           reg = <0x00026000 0x000d2000>;
 +           reg = <0x00026000 0x000c6000>;
         };
@@ -184,7 +182,6 @@ this to all of the `.dts` files for the boards that were affected by this issue.
 
 -       storage_partition: partition@f8000 {
 +       storage_partition: partition@ec000 {
-            label = "storage";
 -           reg = <0x000f8000 0x00008000>;
 +           reg = <0x000ec000 0x00008000>;
         };
@@ -193,3 +190,7 @@ this to all of the `.dts` files for the boards that were affected by this issue.
 And with those changes, we should no longer run into this issue! In the process
 of these changes, we lost 48KB of space for application code, but we're only
 using around 20% of it anyways. 🎉
+
+## Article Updates
+
+- 12/2023: Removed the deprecated `label` property from code snippets.

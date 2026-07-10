@@ -19,11 +19,15 @@
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
+<<<<<<< HEAD
 #include <zephyr/kernel.h>
 // #include <zephyr/bluetooth/hci_err.h>
 #include "conn_internal.h"
 #include <zmk/leds.h>
 #include <zmk/endpoints.h>
+=======
+#include <zephyr/bluetooth/hci_types.h>
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 
 #if IS_ENABLED(CONFIG_SETTINGS)
 
@@ -126,8 +130,8 @@ static void load_identities(void) {
 #define CURR_ADV(adv) (adv << 4)
 
 #define ZMK_ADV_CONN_NAME                                                                          \
-    BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_ONE_TIME, BT_GAP_ADV_FAST_INT_MIN_2, \
-                    BT_GAP_ADV_FAST_INT_MAX_2, NULL)
+    BT_LE_ADV_PARAM(BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_USE_NAME | BT_LE_ADV_OPT_FORCE_NAME_IN_AD,  \
+                    BT_GAP_ADV_FAST_INT_MIN_2, BT_GAP_ADV_FAST_INT_MAX_2, NULL)
 
 static struct zmk_ble_profile profiles[ZMK_BLE_PROFILE_COUNT];
 static uint8_t active_profile;
@@ -137,14 +141,15 @@ static uint8_t adv_bt_id;
 #define DEVICE_NAME CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
 
-BUILD_ASSERT(DEVICE_NAME_LEN <= 16, "ERROR: BLE device name is too long. Max length: 16");
+BUILD_ASSERT(
+    DEVICE_NAME_LEN <= CONFIG_BT_DEVICE_NAME_MAX,
+    "ERROR: BLE device name is too long. Max length: " STRINGIFY(CONFIG_BT_DEVICE_NAME_MAX));
 
-static const struct bt_data zmk_ble_ad[] = {
-    BT_DATA(BT_DATA_NAME_COMPLETE, DEVICE_NAME, DEVICE_NAME_LEN),
-    BT_DATA_BYTES(BT_DATA_GAP_APPEARANCE, 0xC1, 0x03),
+static struct bt_data zmk_ble_ad[] = {
+    BT_DATA_BYTES(BT_DATA_GAP_APPEARANCE, BT_BYTES_LIST_LE16(CONFIG_BT_DEVICE_APPEARANCE)),
     BT_DATA_BYTES(BT_DATA_FLAGS, (BT_LE_AD_GENERAL | BT_LE_AD_NO_BREDR)),
-    BT_DATA_BYTES(BT_DATA_UUID16_SOME, 0x12, 0x18, /* HID Service */
-                  0x0f, 0x18                       /* Battery Service */
+    BT_DATA_BYTES(BT_DATA_UUID16_SOME, BT_UUID_16_ENCODE(BT_UUID_HIDS_VAL), /* HID Service */
+                  BT_UUID_16_ENCODE(BT_UUID_BAS_VAL)                        /* Battery Service */
                   ),
 };
 //add swift pair
@@ -282,12 +287,13 @@ static void advertising_start(void) {
         zmk_ble_prof_select(active_profile);
 }
 
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_BLE) && IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 
 static bt_addr_le_t peripheral_addrs[ZMK_SPLIT_BLE_PERIPHERAL_COUNT];
 
 #endif /* IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL) */
 
+<<<<<<< HEAD
 static void raise_profile_changed_event() {
     // ZMK_EVENT_RAISE(new_zmk_ble_active_profile_changed((struct zmk_ble_active_profile_changed){
     //     .index = active_profile, .profile = &profiles[active_profile]}));
@@ -304,6 +310,11 @@ static void raise_profile_changed_event() {
             break;
         }
     }
+=======
+static void raise_profile_changed_event(void) {
+    raise_zmk_ble_active_profile_changed((struct zmk_ble_active_profile_changed){
+        .index = active_profile, .profile = &profiles[active_profile]});
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 }
 
 static void raise_profile_changed_event_callback(struct k_work *work) {
@@ -312,8 +323,13 @@ static void raise_profile_changed_event_callback(struct k_work *work) {
 
 K_WORK_DEFINE(raise_profile_changed_event_work, raise_profile_changed_event_callback);
 
-bool zmk_ble_active_profile_is_open() {
-    return !bt_addr_le_cmp(&profiles[active_profile].peer, BT_ADDR_LE_ANY);
+bool zmk_ble_active_profile_is_open(void) { return zmk_ble_profile_is_open(active_profile); }
+
+bool zmk_ble_profile_is_open(uint8_t index) {
+    if (index >= ZMK_BLE_PROFILE_COUNT) {
+        return false;
+    }
+    return !bt_addr_le_cmp(&profiles[index].peer, BT_ADDR_LE_ANY);
 }
 void copy_profile_to_same_peer(const bt_addr_le_t *peer) {
     for (int i = 0; i < ZMK_BLE_PROFILE_COUNT; i++) {
@@ -331,7 +347,11 @@ void copy_profile_to_same_peer(const bt_addr_le_t *peer) {
     }
 }
 void set_profile_address(uint8_t index, const bt_addr_le_t *addr) {
+<<<<<<< HEAD
     char setting_name[20];
+=======
+    char setting_name[17];
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
     char addr_str[BT_ADDR_LE_STR_LEN];
 
     bt_addr_le_to_str(addr, addr_str, sizeof(addr_str));
@@ -339,7 +359,9 @@ void set_profile_address(uint8_t index, const bt_addr_le_t *addr) {
     memcpy(&profiles[index].peer, addr, sizeof(bt_addr_le_t));
     sprintf(setting_name, "ble/profiles/%d", index);
     LOG_DBG("Setting profile addr for %s to %s", setting_name, addr_str);
+#if IS_ENABLED(CONFIG_SETTINGS)
     settings_save_one(setting_name, &profiles[index], sizeof(struct zmk_ble_profile));
+#endif
     k_work_submit(&raise_profile_changed_event_work);
 }
 void save_profile(uint8_t index) {
@@ -348,14 +370,25 @@ void save_profile(uint8_t index) {
     settings_save_one(setting_name, &profiles[index], sizeof(struct zmk_ble_profile));
 }
 
-bool zmk_ble_active_profile_is_connected() {
+bool zmk_ble_active_profile_is_connected(void) {
+    return zmk_ble_profile_is_connected(active_profile);
+}
+
+bool zmk_ble_profile_is_connected(uint8_t index) {
+    if (index >= ZMK_BLE_PROFILE_COUNT) {
+        return false;
+    }
     struct bt_conn *conn;
     struct bt_conn_info info;
+<<<<<<< HEAD
     bt_addr_le_t *addr = zmk_ble_active_profile_addr();
     char addr_str[BT_ADDR_LE_STR_LEN];
 
     bt_addr_le_to_str(addr, addr_str, sizeof(addr_str));
     // LOG_INF("active profie:%d,peer:%s",active_profile,addr_str);
+=======
+    bt_addr_le_t *addr = &profiles[index].peer;
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
     if (!bt_addr_le_cmp(addr, BT_ADDR_LE_ANY)) {
         return false;
     } else if ((conn = bt_conn_lookup_addr_le(profiles[active_profile].bt_id, addr)) == NULL) {
@@ -505,6 +538,7 @@ void checked_open_adv(void) {
     advertising_status = ZMK_ADV_CONN;
 }
 
+<<<<<<< HEAD
 int update_advertising() {
     // int err = 0;
     // bt_addr_le_t *addr;
@@ -520,6 +554,15 @@ int update_advertising() {
             blue_led_set_state( LED_PEER_STATE_RECONN);
         }
     } else if (desired_adv == ZMK_ADV_PAIR) {
+=======
+int update_advertising(void) {
+    int err = 0;
+    bt_addr_le_t *addr;
+    struct bt_conn *conn;
+    enum advertising_type desired_adv = ZMK_ADV_NONE;
+
+    if (zmk_ble_active_profile_is_open()) {
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
         desired_adv = ZMK_ADV_CONN;
         blue_led_set_state( LED_PEER_STATE_PAIR);
         k_work_cancel_delayable(&sleep_work);
@@ -597,6 +640,7 @@ void zmk_factory_recover(void)
 #endif    
     settings_delete("fn_exchange");
 
+<<<<<<< HEAD
     
     k_work_init_delayable(&factory_recover_work, factory_recover_work_cb);
     k_work_reschedule(&factory_recover_work, K_MSEC(200));
@@ -611,8 +655,18 @@ int zmk_ble_clear_bonds(void)
     {
        int ret= bt_id_reset(i, inc_bt_addr(i), NULL); 
        LOG_DBG("bt id reset:%d",ret);
-    }
+=======
+K_WORK_DEFINE(update_advertising_work, update_advertising_callback);
 
+static void clear_profile_bond(uint8_t profile) {
+    if (bt_addr_le_cmp(&profiles[profile].peer, BT_ADDR_LE_ANY)) {
+        bt_unpair(BT_ID_DEFAULT, &profiles[profile].peer);
+        set_profile_address(profile, BT_ADDR_LE_ANY);
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
+    }
+}
+
+<<<<<<< HEAD
     for(i=0;i<ZMK_BLE_PROFILE_COUNT;i++)
     {
         sprintf(setting_name, "ble/profiles/%d", i);
@@ -626,6 +680,45 @@ int zmk_ble_clear_bonds(void)
 
 
 int zmk_ble_active_profile_index() { return active_profile; }
+=======
+void zmk_ble_clear_bonds(void) {
+    LOG_DBG("zmk_ble_clear_bonds()");
+
+    clear_profile_bond(active_profile);
+    update_advertising();
+};
+
+void zmk_ble_clear_all_bonds(void) {
+    LOG_DBG("zmk_ble_clear_all_bonds()");
+
+    // Unpair all profiles
+    for (int i = 0; i < ZMK_BLE_PROFILE_COUNT; i++) {
+        clear_profile_bond(i);
+    }
+
+    // Automatically switch to profile 0
+    zmk_ble_prof_select(0);
+    update_advertising();
+};
+
+int zmk_ble_active_profile_index(void) { return active_profile; }
+
+int zmk_ble_profile_index(const bt_addr_le_t *addr) {
+    for (int i = 0; i < ZMK_BLE_PROFILE_COUNT; i++) {
+        if (bt_addr_le_cmp(addr, &profiles[i].peer) == 0) {
+            return i;
+        }
+    }
+    return -ENODEV;
+}
+
+bt_addr_le_t *zmk_ble_profile_address(uint8_t index) {
+    if (index >= ZMK_BLE_PROFILE_COUNT) {
+        return (bt_addr_le_t *)(BT_ADDR_LE_NONE);
+    }
+    return &profiles[index].peer;
+}
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 
 #if IS_ENABLED(CONFIG_SETTINGS)
 static void ble_save_profile_work(struct k_work *work) {
@@ -636,7 +729,7 @@ static void ble_save_profile_work(struct k_work *work) {
 static struct k_work_delayable ble_save_work;
 #endif
 
-static int ble_save_profile() {
+static int ble_save_profile(void) {
 #if IS_ENABLED(CONFIG_SETTINGS)
     return k_work_reschedule(&ble_save_work, K_MSEC(2500));
 #else
@@ -784,22 +877,78 @@ int zmk_ble_prof_select(uint8_t index) {
     return 0;
 };
 
-int zmk_ble_prof_next() {
+int zmk_ble_prof_next(void) {
     LOG_DBG("");
     return zmk_ble_prof_select((active_profile + 1) % ZMK_BLE_PROFILE_COUNT);
 };
 
-int zmk_ble_prof_prev() {
+int zmk_ble_prof_prev(void) {
     LOG_DBG("");
     return zmk_ble_prof_select((active_profile + ZMK_BLE_PROFILE_COUNT - 1) %
                                ZMK_BLE_PROFILE_COUNT);
 };
 
-bt_addr_le_t *zmk_ble_active_profile_addr() { return &profiles[active_profile].peer; }
+int zmk_ble_prof_disconnect(uint8_t index) {
+    if (index >= ZMK_BLE_PROFILE_COUNT)
+        return -ERANGE;
 
-char *zmk_ble_active_profile_name() { return profiles[active_profile].name; }
+    bt_addr_le_t *addr = &profiles[index].peer;
+    struct bt_conn *conn;
+    int result;
 
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+    if (!bt_addr_le_cmp(addr, BT_ADDR_LE_ANY)) {
+        return -ENODEV;
+    } else if ((conn = bt_conn_lookup_addr_le(BT_ID_DEFAULT, addr)) == NULL) {
+        return -ENODEV;
+    }
+
+    result = bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+    LOG_DBG("Disconnected from profile %d: %d", index, result);
+
+    bt_conn_unref(conn);
+    return result;
+}
+
+bt_addr_le_t *zmk_ble_active_profile_addr(void) { return &profiles[active_profile].peer; }
+
+struct bt_conn *zmk_ble_active_profile_conn(void) {
+    struct bt_conn *conn;
+    bt_addr_le_t *addr = zmk_ble_active_profile_addr();
+
+    if (!bt_addr_le_cmp(addr, BT_ADDR_LE_ANY)) {
+        LOG_WRN("Not sending, no active address for current profile");
+        return NULL;
+    } else if ((conn = bt_conn_lookup_addr_le(BT_ID_DEFAULT, addr)) == NULL) {
+        LOG_WRN("Not sending, not connected to active profile");
+        return NULL;
+    }
+
+    return conn;
+}
+
+char *zmk_ble_active_profile_name(void) { return profiles[active_profile].name; }
+
+int zmk_ble_set_device_name(char *name) {
+    // Copy new name to advertising parameters
+    int err = bt_set_name(name);
+    LOG_DBG("New device name: %s", name);
+    if (err) {
+        LOG_ERR("Failed to set new device name (err %d)", err);
+        return err;
+    }
+    if (advertising_status == ZMK_ADV_CONN) {
+        // Stop current advertising so it can restart with new name
+        err = bt_le_adv_stop();
+        advertising_status = ZMK_ADV_NONE;
+        if (err) {
+            LOG_ERR("Failed to stop advertising (err %d)", err);
+            return err;
+        }
+    }
+    return update_advertising();
+}
+
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_BLE) && IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 
 int zmk_ble_put_peripheral_addr(const bt_addr_le_t *addr) {
     for (int i = 0; i < ZMK_SPLIT_BLE_PERIPHERAL_COUNT; i++) {
@@ -823,10 +972,11 @@ int zmk_ble_put_peripheral_addr(const bt_addr_le_t *addr) {
             LOG_DBG("Storing peripheral %s in slot %d", addr_str, i);
             bt_addr_le_copy(&peripheral_addrs[i], addr);
 
+#if IS_ENABLED(CONFIG_SETTINGS)
             char setting_name[32];
             sprintf(setting_name, "ble/peripheral_addresses/%d", i);
             settings_save_one(setting_name, addr, sizeof(bt_addr_le_t));
-
+#endif // IS_ENABLED(CONFIG_SETTINGS)
             return i;
         }
     }
@@ -887,7 +1037,7 @@ static int ble_profiles_handle_set(const char *name, size_t len, settings_read_c
             return err;
         }
     }
-#if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+#if IS_ENABLED(CONFIG_ZMK_SPLIT_BLE) && IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
     else if (settings_name_steq(name, "peripheral_addresses", &next) && next) {
         if (len != sizeof(bt_addr_le_t)) {
             return -EINVAL;
@@ -909,7 +1059,11 @@ static int ble_profiles_handle_set(const char *name, size_t len, settings_read_c
     return 0;
 };
 
-struct settings_handler profiles_handler = {.name = "ble", .h_set = ble_profiles_handle_set};
+static int zmk_ble_complete_startup(void);
+
+static struct settings_handler profiles_handler = {
+    .name = "ble", .h_set = ble_profiles_handle_set, .h_commit = zmk_ble_complete_startup};
+
 #endif /* IS_ENABLED(CONFIG_SETTINGS) */
 
 static bool is_conn_active_profile(const struct bt_conn *conn) {
@@ -949,10 +1103,15 @@ static void connected(struct bt_conn *conn, uint8_t err) {
     profiles[active_profile].connected=1;
 
     LOG_DBG("Connected %s", addr);
+<<<<<<< HEAD
     int ret = bt_conn_set_security(conn, BT_SECURITY_L2);
     if (ret) {
         LOG_ERR("Failed to set security,err:%d", ret); //,id:%d", ret,conn->id);
     }
+=======
+
+    update_advertising();
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 
     if (is_conn_active_profile(conn)) {
         LOG_DBG("Active profile connected");
@@ -1096,13 +1255,19 @@ static void auth_cancel(struct bt_conn *conn) {
     LOG_DBG("Pairing cancelled: %s", addr);
 }
 
+static bool pairing_allowed_for_current_profile(struct bt_conn *conn) {
+    return zmk_ble_active_profile_is_open() ||
+           (IS_ENABLED(CONFIG_BT_SMP_ALLOW_UNAUTH_OVERWRITE) &&
+            bt_addr_le_cmp(zmk_ble_active_profile_addr(), bt_conn_get_dst(conn)) == 0);
+}
+
 static enum bt_security_err auth_pairing_accept(struct bt_conn *conn,
                                                 const struct bt_conn_pairing_feat *const feat) {
     struct bt_conn_info info;
     bt_conn_get_info(conn, &info);
 
     LOG_DBG("role %d, open? %s", info.role, zmk_ble_active_profile_is_open() ? "yes" : "no");
-    if (info.role == BT_CONN_ROLE_PERIPHERAL && !zmk_ble_active_profile_is_open()) {
+    if (info.role == BT_CONN_ROLE_PERIPHERAL && !pairing_allowed_for_current_profile(conn)) {
         LOG_WRN("Rejecting pairing request to taken profile %d", active_profile);
         return BT_SECURITY_ERR_PAIR_NOT_ALLOWED;
     }
@@ -1123,6 +1288,7 @@ static void auth_pairing_complete(struct bt_conn *conn, bool bonded) {
         return;
     }
 
+<<<<<<< HEAD
     // if (!zmk_ble_active_profile_is_open()) {
     //     LOG_ERR("Pairing completed but current profile is not open: %s", addr);
     //     bt_unpair(BT_ID_DEFAULT, dst);
@@ -1144,6 +1310,12 @@ static void auth_pairing_complete(struct bt_conn *conn, bool bonded) {
         //     LOG_INF("reset bt id:%d,new:%d", profiles[active_profile].bt_id, conn->id);
         // }
         profiles[active_profile].bt_id = conn->id;
+=======
+    if (!pairing_allowed_for_current_profile(conn)) {
+        LOG_ERR("Pairing completed but current profile is not open: %s", addr);
+        bt_unpair(BT_ID_DEFAULT, dst);
+        return;
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
     }
 
     profiles[active_profile].bonded=1;
@@ -1189,6 +1361,7 @@ static void zmk_ble_ready(int err) {
     advertising_start();
 }
 
+<<<<<<< HEAD
 // static int zmk_ble_init(const struct device *_arg)
 int zmk_ble_init(const struct device *_arg) {
 
@@ -1241,6 +1414,9 @@ int zmk_ble_init(const struct device *_arg) {
     }
 
 #endif
+=======
+static int zmk_ble_complete_startup(void) {
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 
 #if IS_ENABLED(CONFIG_ZMK_BLE_CLEAR_BONDS_ON_START)
     LOG_WRN("Clearing all existing BLE bond information from the keyboard");
@@ -1251,7 +1427,7 @@ int zmk_ble_init(const struct device *_arg) {
         char setting_name[15];
         sprintf(setting_name, "ble/profiles/%d", i);
 
-        err = settings_delete(setting_name);
+        int err = settings_delete(setting_name);
         if (err) {
             LOG_ERR("Failed to delete setting: %d", err);
         }
@@ -1263,7 +1439,7 @@ int zmk_ble_init(const struct device *_arg) {
         char setting_name[32];
         sprintf(setting_name, "ble/peripheral_addresses/%d", i);
 
-        err = settings_delete(setting_name);
+        int err = settings_delete(setting_name);
         if (err) {
             LOG_ERR("Failed to delete setting: %d", err);
         }
@@ -1278,6 +1454,24 @@ int zmk_ble_init(const struct device *_arg) {
     zmk_ble_ready(0);
 
     // enable_llpm_mode();
+
+    return 0;
+}
+
+static int zmk_ble_init(void) {
+    int err = bt_enable(NULL);
+
+    if (err < 0 && err != -EALREADY) {
+        LOG_ERR("BLUETOOTH FAILED (%d)", err);
+        return err;
+    }
+
+#if IS_ENABLED(CONFIG_SETTINGS)
+    settings_register(&profiles_handler);
+    k_work_init_delayable(&ble_save_work, ble_save_profile_work);
+#else
+    zmk_ble_complete_startup();
+#endif
 
     return 0;
 }
@@ -1304,9 +1498,9 @@ static int zmk_ble_handle_key_user(struct zmk_keycode_state_changed *event) {
         return ZMK_EV_EVENT_BUBBLE;
     }
 
-    if (!event->state) {
-        LOG_DBG("Key released, ignoring");
-        return ZMK_EV_EVENT_BUBBLE;
+    if (event->state) {
+        LOG_DBG("Key press, ignoring");
+        return ZMK_EV_EVENT_HANDLED;
     }
 
     if (key == HID_USAGE_KEY_KEYBOARD_ESCAPE) {
@@ -1336,7 +1530,7 @@ static int zmk_ble_handle_key_user(struct zmk_keycode_state_changed *event) {
           zmk_ble_numeric_usage_to_value(key, HID_USAGE_KEY_KEYPAD_1_AND_END,
                                          HID_USAGE_KEY_KEYPAD_0_AND_INSERT, &val))) {
         LOG_DBG("Key not a number, ignoring");
-        return ZMK_EV_EVENT_BUBBLE;
+        return ZMK_EV_EVENT_HANDLED;
     }
 
     if (ring_buf_space_get(&passkey_entries) <= 0) {

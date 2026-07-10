@@ -10,6 +10,7 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/kscan.h>
+#include <zephyr/pm/device.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/__assert.h>
@@ -381,7 +382,7 @@ static int kscan_matrix_read(const struct device *dev) {
 }
 
 static void kscan_matrix_work_handler(struct k_work *work) {
-    struct k_work_delayable *dwork = CONTAINER_OF(work, struct k_work_delayable, work);
+    struct k_work_delayable *dwork = k_work_delayable_from_work(work);
     struct kscan_matrix_data *data = CONTAINER_OF(dwork, struct kscan_matrix_data, work);
     kscan_matrix_read(data->dev);
 }
@@ -497,6 +498,44 @@ static int kscan_matrix_init_outputs(const struct device *dev) {
     return 0;
 }
 
+#if IS_ENABLED(CONFIG_PM_DEVICE)
+
+static int kscan_matrix_disconnect_inputs(const struct device *dev) {
+    const struct kscan_matrix_data *data = dev->data;
+
+    for (int i = 0; i < data->inputs.len; i++) {
+        const struct gpio_dt_spec *gpio = &data->inputs.gpios[i].spec;
+        int err = gpio_pin_configure_dt(gpio, GPIO_DISCONNECTED);
+        if (err) {
+            return err;
+        }
+    }
+
+    return 0;
+}
+
+static int kscan_matrix_disconnect_outputs(const struct device *dev) {
+    const struct kscan_matrix_config *config = dev->config;
+
+    for (int i = 0; i < config->outputs.len; i++) {
+        const struct gpio_dt_spec *gpio = &config->outputs.gpios[i].spec;
+        int err = gpio_pin_configure_dt(gpio, GPIO_DISCONNECTED);
+        if (err) {
+            return err;
+        }
+    }
+
+    return 0;
+}
+
+#endif // IS_ENABLED(CONFIG_PM_DEVICE)
+
+static void kscan_matrix_setup_pins(const struct device *dev) {
+    kscan_matrix_init_inputs(dev);
+    kscan_matrix_init_outputs(dev);
+    kscan_matrix_set_all_outputs(dev, 0);
+}
+
 static int kscan_matrix_init(const struct device *dev) {
     struct kscan_matrix_data *data = dev->data;
     const struct kscan_matrix_config *config = dev->config;
@@ -514,6 +553,7 @@ static int kscan_matrix_init(const struct device *dev) {
     // Sort inputs by port so we can read each port just once per scan.
     kscan_gpio_list_sort_by_port(&data->inputs);
 
+<<<<<<< HEAD
     kscan_matrix_init_inputs(dev);
     kscan_matrix_init_outputs(dev);
     // add esc key check
@@ -532,10 +572,42 @@ static int kscan_matrix_init(const struct device *dev) {
 
     kscan_matrix_set_all_outputs(dev, 0);
 
+=======
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
     k_work_init_delayable(&data->work, kscan_matrix_work_handler);
+
+#if IS_ENABLED(CONFIG_PM_DEVICE)
+    pm_device_init_suspended(dev);
+
+#if IS_ENABLED(CONFIG_PM_DEVICE_RUNTIME)
+    pm_device_runtime_enable(dev);
+#endif
+
+#else
+    kscan_matrix_setup_pins(dev);
+#endif
 
     return 0;
 }
+
+#if IS_ENABLED(CONFIG_PM_DEVICE)
+
+static int kscan_matrix_pm_action(const struct device *dev, enum pm_device_action action) {
+    switch (action) {
+    case PM_DEVICE_ACTION_SUSPEND:
+        kscan_matrix_disconnect_inputs(dev);
+        kscan_matrix_disconnect_outputs(dev);
+
+        return kscan_matrix_disable(dev);
+    case PM_DEVICE_ACTION_RESUME:
+        kscan_matrix_setup_pins(dev);
+        return kscan_matrix_enable(dev);
+    default:
+        return -ENOTSUP;
+    }
+}
+
+#endif // IS_ENABLED(CONFIG_PM_DEVICE)
 
 static const struct kscan_driver_api kscan_matrix_api = {
     .config = kscan_matrix_configure,
@@ -568,7 +640,7 @@ static const struct kscan_driver_api kscan_matrix_api = {
         .matrix_state = kscan_matrix_state_##n,                                                    \
         COND_INTERRUPTS((.irqs = kscan_matrix_irqs_##n, ))};                                       \
                                                                                                    \
-    static struct kscan_matrix_config kscan_matrix_config_##n = {                                  \
+    static const struct kscan_matrix_config kscan_matrix_config_##n = {                            \
         .rows = ARRAY_SIZE(kscan_matrix_rows_##n),                                                 \
         .cols = ARRAY_SIZE(kscan_matrix_cols_##n),                                                 \
         .outputs =                                                                                 \
@@ -583,7 +655,9 @@ static const struct kscan_driver_api kscan_matrix_api = {
         .diode_direction = INST_DIODE_DIR(n),                                                      \
     };                                                                                             \
                                                                                                    \
-    DEVICE_DT_INST_DEFINE(n, &kscan_matrix_init, NULL, &kscan_matrix_data_##n,                     \
+    PM_DEVICE_DT_INST_DEFINE(n, kscan_matrix_pm_action);                                           \
+                                                                                                   \
+    DEVICE_DT_INST_DEFINE(n, &kscan_matrix_init, PM_DEVICE_DT_INST_GET(n), &kscan_matrix_data_##n, \
                           &kscan_matrix_config_##n, POST_KERNEL, CONFIG_KSCAN_INIT_PRIORITY,       \
                           &kscan_matrix_api);
 

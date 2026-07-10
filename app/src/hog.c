@@ -15,9 +15,19 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #include <zephyr/bluetooth/gatt.h>
 
 #include <zmk/ble.h>
+#include <zmk/endpoints_types.h>
 #include <zmk/hog.h>
 #include <zmk/hid.h>
+<<<<<<< HEAD
 #include "./launcher/mousekey.h"
+=======
+#if IS_ENABLED(CONFIG_ZMK_POINTING_SMOOTH_SCROLLING)
+#include <zmk/pointing/resolution_multipliers.h>
+#endif // IS_ENABLED(CONFIG_ZMK_POINTING_SMOOTH_SCROLLING)
+#if IS_ENABLED(CONFIG_ZMK_HID_INDICATORS)
+#include <zmk/hid_indicators.h>
+#endif // IS_ENABLED(CONFIG_ZMK_HID_INDICATORS)
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 
 enum {
     HIDS_REMOTE_WAKE = BIT(0),
@@ -52,19 +62,48 @@ static struct hids_report input = {
     .type = HIDS_INPUT,
 };
 
+#if IS_ENABLED(CONFIG_ZMK_HID_INDICATORS)
+
+static struct hids_report led_indicators = {
+    .id = ZMK_HID_REPORT_ID_LEDS,
+    .type = HIDS_OUTPUT,
+};
+
+#endif // IS_ENABLED(CONFIG_ZMK_HID_INDICATORS)
+
 static struct hids_report consumer_input = {
     .id = ZMK_HID_REPORT_ID_CONSUMER,
     .type = HIDS_INPUT,
 };
 
+<<<<<<< HEAD
 static struct hids_report output = {
     .id = ZMK_HID_REPORT_ID_KEYBOARD,
     .type = HIDS_OUTPUT,
 };
+=======
+#if IS_ENABLED(CONFIG_ZMK_POINTING)
+
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 static struct hids_report mouse_input = {
     .id = ZMK_HID_REPORT_ID_MOUSE,
     .type = HIDS_INPUT,
 };
+<<<<<<< HEAD
+=======
+
+#if IS_ENABLED(CONFIG_ZMK_POINTING_SMOOTH_SCROLLING)
+
+static struct hids_report mouse_feature = {
+    .id = ZMK_HID_REPORT_ID_MOUSE,
+    .type = HIDS_FEATURE,
+};
+
+#endif // IS_ENABLED(CONFIG_ZMK_POINTING_SMOOTH_SCROLLING)
+
+#endif // IS_ENABLED(CONFIG_ZMK_POINTING)
+
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 static bool host_requests_notification = false;
 static uint8_t ctrl_point;
 static uint8_t hids_outp_rep[20];
@@ -97,6 +136,34 @@ static ssize_t read_hids_input_report(struct bt_conn *conn, const struct bt_gatt
                              sizeof(struct zmk_hid_keyboard_report_body));
 }
 
+#if IS_ENABLED(CONFIG_ZMK_HID_INDICATORS)
+static ssize_t write_hids_leds_report(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+                                      const void *buf, uint16_t len, uint16_t offset,
+                                      uint8_t flags) {
+    if (offset != 0) {
+        return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
+    }
+    if (len != sizeof(struct zmk_hid_led_report_body)) {
+        return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
+    }
+
+    struct zmk_hid_led_report_body *report = (struct zmk_hid_led_report_body *)buf;
+    int profile = zmk_ble_profile_index(bt_conn_get_dst(conn));
+    if (profile < 0) {
+        return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
+    }
+
+    struct zmk_endpoint_instance endpoint = {.transport = ZMK_TRANSPORT_BLE,
+                                             .ble = {
+                                                 .profile_index = profile,
+                                             }};
+    zmk_hid_indicators_process_report(report, endpoint);
+
+    return len;
+}
+
+#endif // IS_ENABLED(CONFIG_ZMK_HID_INDICATORS)
+
 static ssize_t read_hids_consumer_input_report(struct bt_conn *conn,
                                                const struct bt_gatt_attr *attr, void *buf,
                                                uint16_t len, uint16_t offset) {
@@ -104,6 +171,7 @@ static ssize_t read_hids_consumer_input_report(struct bt_conn *conn,
     return bt_gatt_attr_read(conn, attr, buf, len, offset, report_body,
                              sizeof(struct zmk_hid_consumer_report_body));
 }
+<<<<<<< HEAD
 static ssize_t read_hids_mouse_input_report(struct bt_conn *conn,
                                                const struct bt_gatt_attr *attr, void *buf,
                                                uint16_t len, uint16_t offset) {
@@ -111,6 +179,76 @@ static ssize_t read_hids_mouse_input_report(struct bt_conn *conn,
     return bt_gatt_attr_read(conn, attr, buf, len, offset, &report.buttons,
                              sizeof(report_mouse_t)-1);
 }
+=======
+
+#if IS_ENABLED(CONFIG_ZMK_POINTING)
+
+static ssize_t read_hids_mouse_input_report(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+                                            void *buf, uint16_t len, uint16_t offset) {
+    struct zmk_hid_mouse_report_body *report_body = &zmk_hid_get_mouse_report()->body;
+    return bt_gatt_attr_read(conn, attr, buf, len, offset, report_body,
+                             sizeof(struct zmk_hid_mouse_report_body));
+}
+
+#if IS_ENABLED(CONFIG_ZMK_POINTING_SMOOTH_SCROLLING)
+
+static ssize_t read_hids_mouse_feature_report(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+                                              void *buf, uint16_t len, uint16_t offset) {
+
+    int profile = zmk_ble_profile_index(bt_conn_get_dst(conn));
+    if (profile < 0) {
+        LOG_DBG("   BT_ATT_ERR_UNLIKELY");
+        return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
+    }
+
+    struct zmk_endpoint_instance endpoint = {
+        .transport = ZMK_TRANSPORT_BLE,
+        .ble = {.profile_index = profile},
+    };
+
+    struct zmk_pointing_resolution_multipliers mult =
+        zmk_pointing_resolution_multipliers_get_profile(endpoint);
+
+    struct zmk_hid_mouse_resolution_feature_report_body report = {
+        .wheel_res = mult.wheel,
+        .hwheel_res = mult.hor_wheel,
+    };
+
+    return bt_gatt_attr_read(conn, attr, buf, len, offset, &report,
+                             sizeof(struct zmk_hid_mouse_resolution_feature_report_body));
+}
+
+static ssize_t write_hids_mouse_feature_report(struct bt_conn *conn,
+                                               const struct bt_gatt_attr *attr, const void *buf,
+                                               uint16_t len, uint16_t offset, uint8_t flags) {
+    if (offset != 0) {
+        return BT_GATT_ERR(BT_ATT_ERR_INVALID_OFFSET);
+    }
+    if (len != sizeof(struct zmk_hid_mouse_resolution_feature_report_body)) {
+        return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
+    }
+
+    struct zmk_hid_mouse_resolution_feature_report_body *report =
+        (struct zmk_hid_mouse_resolution_feature_report_body *)buf;
+    int profile = zmk_ble_profile_index(bt_conn_get_dst(conn));
+    if (profile < 0) {
+        return BT_GATT_ERR(BT_ATT_ERR_UNLIKELY);
+    }
+
+    struct zmk_endpoint_instance endpoint = {.transport = ZMK_TRANSPORT_BLE,
+                                             .ble = {
+                                                 .profile_index = profile,
+                                             }};
+    zmk_pointing_resolution_multipliers_process_report(report, endpoint);
+
+    return len;
+}
+
+#endif // IS_ENABLED(CONFIG_ZMK_POINTING_SMOOTH_SCROLLING)
+
+#endif // IS_ENABLED(CONFIG_ZMK_POINTING)
+
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 // static ssize_t write_proto_mode(struct bt_conn *conn,
 //                                 const struct bt_gatt_attr *attr,
 //                                 const void *buf, uint16_t len, uint16_t offset,
@@ -173,23 +311,53 @@ BT_GATT_SERVICE_DEFINE(
     BT_GATT_CCC(input_ccc_changed, BT_GATT_PERM_READ_ENCRYPT | BT_GATT_PERM_WRITE_ENCRYPT),
     BT_GATT_DESCRIPTOR(BT_UUID_HIDS_REPORT_REF, BT_GATT_PERM_READ_ENCRYPT, read_hids_report_ref,
                        NULL, &input),
+
     BT_GATT_CHARACTERISTIC(BT_UUID_HIDS_REPORT, BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
                            BT_GATT_PERM_READ_ENCRYPT, read_hids_consumer_input_report, NULL, NULL),
     BT_GATT_CCC(input_ccc_changed, BT_GATT_PERM_READ_ENCRYPT | BT_GATT_PERM_WRITE_ENCRYPT),
     BT_GATT_DESCRIPTOR(BT_UUID_HIDS_REPORT_REF, BT_GATT_PERM_READ_ENCRYPT, read_hids_report_ref,
                        NULL, &consumer_input),
+<<<<<<< HEAD
     //mouse reprot
+=======
+
+#if IS_ENABLED(CONFIG_ZMK_POINTING)
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
     BT_GATT_CHARACTERISTIC(BT_UUID_HIDS_REPORT, BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
                            BT_GATT_PERM_READ_ENCRYPT, read_hids_mouse_input_report, NULL, NULL),
     BT_GATT_CCC(input_ccc_changed, BT_GATT_PERM_READ_ENCRYPT | BT_GATT_PERM_WRITE_ENCRYPT),
     BT_GATT_DESCRIPTOR(BT_UUID_HIDS_REPORT_REF, BT_GATT_PERM_READ_ENCRYPT, read_hids_report_ref,
                        NULL, &mouse_input),
+<<<<<<< HEAD
     //led out
     BT_GATT_CHARACTERISTIC(BT_UUID_HIDS_REPORT,BT_GATT_CHRC_READ|BT_GATT_CHRC_WRITE |BT_GATT_CHRC_WRITE_WITHOUT_RESP, 
                         BT_GATT_PERM_WRITE, NULL, hids_outp_rep_write,hids_outp_rep),
     BT_GATT_DESCRIPTOR(BT_UUID_HIDS_REPORT_REF, BT_GATT_PERM_READ_ENCRYPT, read_hids_report_ref,
                        NULL, &output),
     
+=======
+
+#if IS_ENABLED(CONFIG_ZMK_POINTING_SMOOTH_SCROLLING)
+    BT_GATT_CHARACTERISTIC(BT_UUID_HIDS_REPORT,
+                           BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+                           BT_GATT_PERM_READ_ENCRYPT | BT_GATT_PERM_WRITE_ENCRYPT,
+                           read_hids_mouse_feature_report, write_hids_mouse_feature_report, NULL),
+    BT_GATT_DESCRIPTOR(BT_UUID_HIDS_REPORT_REF, BT_GATT_PERM_READ_ENCRYPT, read_hids_report_ref,
+                       NULL, &mouse_feature),
+#endif // IS_ENABLED(CONFIG_ZMK_POINTING_SMOOTH_SCROLLING)
+
+#endif // IS_ENABLED(CONFIG_ZMK_POINTING)
+
+#if IS_ENABLED(CONFIG_ZMK_HID_INDICATORS)
+    BT_GATT_CHARACTERISTIC(BT_UUID_HIDS_REPORT,
+                           BT_GATT_CHRC_READ | BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP,
+                           BT_GATT_PERM_READ_ENCRYPT | BT_GATT_PERM_WRITE_ENCRYPT, NULL,
+                           write_hids_leds_report, NULL),
+    BT_GATT_DESCRIPTOR(BT_UUID_HIDS_REPORT_REF, BT_GATT_PERM_READ_ENCRYPT, read_hids_report_ref,
+                       NULL, &led_indicators),
+#endif // IS_ENABLED(CONFIG_ZMK_HID_INDICATORS)
+
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
     BT_GATT_CHARACTERISTIC(BT_UUID_HIDS_CTRL_POINT, BT_GATT_CHRC_WRITE_WITHOUT_RESP,
                            BT_GATT_PERM_WRITE, NULL, write_ctrl_point, &ctrl_point),
 
@@ -198,6 +366,7 @@ BT_GATT_SERVICE_DEFINE(
     
     );
 
+<<<<<<< HEAD
 struct bt_conn *destination_connection() {
     struct bt_conn *conn;
     bt_addr_le_t *addr = zmk_ble_active_profile_addr();
@@ -213,6 +382,8 @@ struct bt_conn *destination_connection() {
     return conn;
 }
 
+=======
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 K_THREAD_STACK_DEFINE(hog_q_stack, CONFIG_ZMK_BLE_THREAD_STACK_SIZE);
 
 struct k_work_q hog_work_q;
@@ -224,7 +395,7 @@ void send_keyboard_report_callback(struct k_work *work) {
     struct zmk_hid_keyboard_report_body report;
 
     while (k_msgq_get(&zmk_hog_keyboard_msgq, &report, K_NO_WAIT) == 0) {
-        struct bt_conn *conn = destination_connection();
+        struct bt_conn *conn = zmk_ble_active_profile_conn();
         if (conn == NULL) {
             return;
         }
@@ -236,8 +407,10 @@ void send_keyboard_report_callback(struct k_work *work) {
         };
         // LOG_HEXDUMP_INF(notify_params.data, notify_params.len, "report:");
         int err = bt_gatt_notify_cb(conn, &notify_params);
-        if (err) {
-            LOG_ERR("Error notifying %d", err);
+        if (err == -EPERM) {
+            bt_conn_set_security(conn, BT_SECURITY_L2);
+        } else if (err) {
+            LOG_DBG("Error notifying %d", err);
         }
 
         bt_conn_unref(conn);
@@ -279,7 +452,7 @@ void send_consumer_report_callback(struct k_work *work) {
     struct zmk_hid_consumer_report_body report;
 
     while (k_msgq_get(&zmk_hog_consumer_msgq, &report, K_NO_WAIT) == 0) {
-        struct bt_conn *conn = destination_connection();
+        struct bt_conn *conn = zmk_ble_active_profile_conn();
         if (conn == NULL) {
             return;
         }
@@ -291,7 +464,9 @@ void send_consumer_report_callback(struct k_work *work) {
         };
 
         int err = bt_gatt_notify_cb(conn, &notify_params);
-        if (err) {
+        if (err == -EPERM) {
+            bt_conn_set_security(conn, BT_SECURITY_L2);
+        } else if (err) {
             LOG_DBG("Error notifying %d", err);
         }
 
@@ -322,6 +497,7 @@ int zmk_hog_send_consumer_report(struct zmk_hid_consumer_report_body *report) {
     return 0;
 };
 
+<<<<<<< HEAD
 K_MSGQ_DEFINE(zmk_hog_mouse_msgq, sizeof(report_mouse_t),10, 4);
 
 void send_mouse_report_callback(struct k_work *work) {
@@ -329,18 +505,40 @@ void send_mouse_report_callback(struct k_work *work) {
 
     while (k_msgq_get(&zmk_hog_mouse_msgq, &report, K_NO_WAIT) == 0) {
         struct bt_conn *conn = destination_connection();
+=======
+#if IS_ENABLED(CONFIG_ZMK_POINTING)
+
+K_MSGQ_DEFINE(zmk_hog_mouse_msgq, sizeof(struct zmk_hid_mouse_report_body),
+              CONFIG_ZMK_BLE_MOUSE_REPORT_QUEUE_SIZE, 4);
+
+void send_mouse_report_callback(struct k_work *work) {
+    struct zmk_hid_mouse_report_body report;
+    while (k_msgq_get(&zmk_hog_mouse_msgq, &report, K_NO_WAIT) == 0) {
+        struct bt_conn *conn = zmk_ble_active_profile_conn();
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
         if (conn == NULL) {
             return;
         }
 
         struct bt_gatt_notify_params notify_params = {
             .attr = &hog_svc.attrs[13],
+<<<<<<< HEAD
             .data = &report.buttons,
             .len = sizeof(report)-1,
         };
 
         int err = bt_gatt_notify_cb(conn, &notify_params);
         if (err) {
+=======
+            .data = &report,
+            .len = sizeof(report),
+        };
+
+        int err = bt_gatt_notify_cb(conn, &notify_params);
+        if (err == -EPERM) {
+            bt_conn_set_security(conn, BT_SECURITY_L2);
+        } else if (err) {
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
             LOG_DBG("Error notifying %d", err);
         }
 
@@ -350,13 +548,21 @@ void send_mouse_report_callback(struct k_work *work) {
 
 K_WORK_DEFINE(hog_mouse_work, send_mouse_report_callback);
 
+<<<<<<< HEAD
 int zmk_hog_send_mouse_report(report_mouse_t *report) {
+=======
+int zmk_hog_send_mouse_report(struct zmk_hid_mouse_report_body *report) {
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
     int err = k_msgq_put(&zmk_hog_mouse_msgq, report, K_MSEC(100));
     if (err) {
         switch (err) {
         case -EAGAIN: {
             LOG_WRN("Consumer message queue full, popping first message and queueing again");
+<<<<<<< HEAD
             report_mouse_t discarded_report;
+=======
+            struct zmk_hid_mouse_report_body discarded_report;
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
             k_msgq_get(&zmk_hog_mouse_msgq, &discarded_report, K_NO_WAIT);
             return zmk_hog_send_mouse_report(report);
         }
@@ -370,9 +576,15 @@ int zmk_hog_send_mouse_report(report_mouse_t *report) {
 
     return 0;
 };
+<<<<<<< HEAD
 
 
 int zmk_hog_init(const struct device *_arg) {
+=======
+#endif // IS_ENABLED(CONFIG_ZMK_POINTING)
+
+static int zmk_hog_init(void) {
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
     static const struct k_work_queue_config queue_config = {.name = "HID Over GATT Send Work"};
     k_work_queue_start(&hog_work_q, hog_q_stack, K_THREAD_STACK_SIZEOF(hog_q_stack),
                        CONFIG_ZMK_BLE_THREAD_PRIORITY, &queue_config);

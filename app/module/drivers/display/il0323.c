@@ -177,6 +177,7 @@ static int il0323_clear_and_write_buffer(const struct device *dev, uint8_t patte
 
     line = k_malloc(IL0323_NUMOF_PAGES);
     if (line == NULL) {
+        LOG_ERR("Failed to allocate memory for the clear");
         return -ENOMEM;
     }
 
@@ -341,7 +342,7 @@ static int il0323_controller_init(const struct device *dev) {
 static int il0323_init(const struct device *dev) {
     const struct il0323_cfg *cfg = dev->config;
 
-    if (!spi_is_ready(&cfg->spi)) {
+    if (!spi_is_ready_dt(&cfg->spi)) {
         LOG_ERR("SPI device not ready for IL0323");
         return -EIO;
     }
@@ -370,14 +371,14 @@ static int il0323_init(const struct device *dev) {
     return il0323_controller_init(dev);
 }
 
-static struct il0323_cfg il0323_config = {
+static const struct il0323_cfg il0323_config = {
     .spi = SPI_DT_SPEC_INST_GET(0, SPI_OP_MODE_MASTER | SPI_WORD_SET(8), 0),
     .reset = GPIO_DT_SPEC_INST_GET(0, reset_gpios),
     .busy = GPIO_DT_SPEC_INST_GET(0, busy_gpios),
     .dc = GPIO_DT_SPEC_INST_GET(0, dc_gpios),
 };
 
-static struct display_driver_api il0323_driver_api = {
+static const struct display_driver_api il0323_driver_api = {
     .blanking_on = il0323_blanking_on,
     .blanking_off = il0323_blanking_off,
     .write = il0323_write,

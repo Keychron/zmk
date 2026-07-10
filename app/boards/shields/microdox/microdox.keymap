@@ -13,6 +13,7 @@
                 compatible = "zmk,keymap";
 
                 default_layer {
+                        display-name = "Default Layer";
 // -----------------------------------------------------------------------------------------
 // |  Q  |  W  |  E  |  R  |  T   |   |  Y  |  U   |  I  |  O  |  P  |
 // |  A  |  S  |  D  |  F  |  G   |   |  H  |  J   |  K  |  L  |  ;  |
@@ -26,9 +27,10 @@
                         >;
                 };
                 nav_layer {
+                        display-name = "Nav Layer";
 // -----------------------------------------------------------------------------------------
 // |BTCLR|     | ESC |  ~   |     |   | TAB | HOME |  UP  | END | DEL  |
-// | BT1 | GUI | ALT | CTRL | NUM |   |  /  | LEFT | DOWN | RGT | BKSP |
+// | BT1 | GUI | ALT | CTRL | NUM |   |  /  | LEFT | DOWN | RGT | BSPC |
 // | BT2 |     |     |      |     |   |  \  | ENT  |      |     |      |
 //             |     |      |     |   |     |      |      |
                         bindings = <
@@ -40,15 +42,16 @@
                 };
 
                 sym_layer {
+                        display-name = "Sym Layer";
 // -----------------------------------------------------------------------------------------
 // |  !  |  @  |  #  |  $  |  %  |   |  ^  |  &  |  *  |  (  |  )  |
 // |     |     |     |     |     |   |  -  |  =  |  {  |  }  | "|" |
 // |     |     |     |     |     |   |  _  |  +  |  [  |  ]  |  \  |
 //             | GUI |     | SPC |   | ENT |     | ALT |
                         bindings = <
-   &kp EXCL  &kp AT    &kp HASH  &kp DLLR  &kp PRCNT   &kp CARET &kp AMPS  &kp KP_MULTIPLY &kp LPAR &kp RPAR
-   &trans    &trans    &trans    &trans    &trans      &kp MINUS &kp EQUAL &kp LBKT        &kp RBKT &kp PIPE
-   &trans    &trans    &trans    &trans    &trans      &trans    &trans    &trans          &trans   &kp BSLH
+   &kp EXCL  &kp AT    &kp HASH  &kp DLLR  &kp PRCNT   &kp CARET &kp AMPS  &kp ASTRK &kp LPAR &kp RPAR
+   &trans    &trans    &trans    &trans    &trans      &kp MINUS &kp EQUAL &kp LBKT  &kp RBKT &kp PIPE
+   &trans    &trans    &trans    &trans    &trans      &trans    &trans    &trans    &trans   &kp BSLH
                        &kp LGUI  &trans    &kp SPACE   &kp RET   &trans    &kp RALT
                         >;
                 };
@@ -56,6 +59,7 @@
 // This layer is unreachable until "tri layer state" is sorted out.
 // Leaving it here for completeness.
                 num_layer {
+                        display-name = "Num Layer";
 // -----------------------------------------------------------------------------------------
 // |     |     |     |     |     |   |  A  |  7  |  8  |  9  |  D  |
 // |     |     |     |     |     |   |  B  |  4  |  5  |  6  |  E  |
