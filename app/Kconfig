@@ -177,6 +177,12 @@ config ZMK_BLE_EXPERIMENTAL_CONN
       Enables settings that are planned to be default in future versions of ZMK
       to improve connection stability.
 
+<<<<<<< HEAD
+#choice BT_LL_SW_LLCP_IMPL
+#    default BT_LL_SW_LLCP_LEGACY
+
+#endchoice
+=======
 config ZMK_BLE_EXPERIMENTAL_SEC
     bool "Experimental BLE security changes"
     imply BT_SMP_ALLOW_UNAUTH_OVERWRITE
@@ -189,6 +195,7 @@ config ZMK_BLE_EXPERIMENTAL_FEATURES
     select ZMK_BLE_EXPERIMENTAL_SEC
     help
       Enables experimental connection changes and security features.
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 
 config ZMK_BLE_PASSKEY_ENTRY
     bool "Require passkey entry on the keyboard to complete pairing"
@@ -210,7 +217,7 @@ config ZMK_BLE_THREAD_PRIORITY
 
 config ZMK_BLE_KEYBOARD_REPORT_QUEUE_SIZE
     int "Max number of keyboard HID reports to queue for sending over BLE"
-    default 20
+    default 64
 
 config ZMK_BLE_CONSUMER_REPORT_QUEUE_SIZE
     int "Max number of consumer HID reports to queue for sending over BLE"
@@ -470,7 +477,7 @@ menu "Behavior Options"
 
 config ZMK_BEHAVIORS_QUEUE_SIZE
     int "Maximum number of behaviors to allow queueing from a macro or other complex behavior"
-    default 64
+    default 512
 
 rsource "Kconfig.behaviors"
 
@@ -553,7 +560,7 @@ config ZMK_LOGGING_MINIMAL
 if !ZMK_LOGGING_MINIMAL
 
 config ZMK_LOG_LEVEL
-    default 4
+    default 1 #4
 
 endif
 
@@ -599,6 +606,16 @@ config ZMK_RTT_LOGGING
     select CONSOLE
     select RTT_CONSOLE
 
+config ZMK_UART_LOGGING
+    bool "Enable UART logging to help debug"
+    select LOG
+    select DEBUG
+    select ASSERT
+    select SERIAL
+    select SERIAL_HAS_DRIVER
+    select CONSOLE
+    select UART_CONSOLE
+
 if ZMK_RTT_LOGGING
 
 config SEGGER_RTT_BUFFER_SIZE_UP
@@ -606,7 +623,7 @@ config SEGGER_RTT_BUFFER_SIZE_UP
 
 endif # ZMK_RTT_LOGGING
 
-if ZMK_USB_LOGGING || ZMK_RTT_LOGGING
+if ZMK_USB_LOGGING || ZMK_RTT_LOGGING || ZMK_UART_LOGGING
 
 config LOG_BUFFER_SIZE
     default 8192
@@ -643,11 +660,15 @@ endif # SETTINGS
 config ZMK_BATTERY_REPORT_INTERVAL
     depends on ZMK_BATTERY_REPORTING
     int "Battery level report interval in seconds"
+<<<<<<< HEAD
+    default 30
+=======
 
 config ZMK_LOW_PRIORITY_WORK_QUEUE
     bool "Work queue for low priority items"
 
 if ZMK_LOW_PRIORITY_WORK_QUEUE
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 
 config ZMK_LOW_PRIORITY_THREAD_STACK_SIZE
     int "Low priority thread stack size"
@@ -704,6 +725,48 @@ config ZMK_KEYMAP_SENSORS_DEFAULT_TRIGGERS_PER_ROTATION
 
 endif # ZMK_KEYMAP_SENSORS
 
+<<<<<<< HEAD
+choice CBPRINTF_IMPLEMENTATION
+    default CBPRINTF_NANO
+
+endchoice
+
+config ZMK_LED_INIT_PRIORITY
+    int "LED Init Priority"
+    default 40
+    
+config ZMK_NRF_24G_ECB
+    bool "enabel nordic 24g ecb"
+    select NRFX_TIMER2
+    default n
+
+if ZMK_NRF_24G_ECB
+config ESB_PTX_APP_LOG_LEVEL
+    int 
+    default 4
+config ESB_DYNAMIC_INTERRUPTS
+    bool "enable dynamic interrupt"
+    default y
+config ESB_MAX_PAYLOAD_LENGTH
+    int "max payload length"
+    default 40
+endif 
+
+
+
+if ZMK_NRF_24G_ECB
+ config ZMK_NRF_24G
+    bool 
+    default y
+endif 
+
+config ZMK_LAUNCHER
+    bool "enable via dynamic setting"
+    default y
+
+    
+=======
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 module = ZMK
 module-str = zmk
 source "subsys/logging/Kconfig.template.log_config"

@@ -5,7 +5,7 @@ description: Tap Dance Behavior
 
 compatible: "zmk,behavior-tap-dance"
 
-include: zero_param.yaml
+include: one_param.yaml
 
 properties:
   bindings:

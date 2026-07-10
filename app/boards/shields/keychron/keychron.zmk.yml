@@ -1,0 +1,14 @@
+file_format: "1"
+id: keychron
+name: keychron
+type: board
+arch: arm
+features:
+  - keys
+
+outputs:
+  - usb
+  - ble
+  - 24G
+  
+url: https://www.keychron.com/

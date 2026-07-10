@@ -23,13 +23,22 @@ void zmk_ble_clear_bonds(void);
 int zmk_ble_prof_next(void);
 int zmk_ble_prof_prev(void);
 int zmk_ble_prof_select(uint8_t index);
+<<<<<<< HEAD
+int zmk_ble_prof_pair_start(uint8_t index);
+=======
 void zmk_ble_clear_all_bonds(void);
 int zmk_ble_prof_disconnect(uint8_t index);
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 
 int zmk_ble_active_profile_index(void);
 int zmk_ble_profile_index(const bt_addr_le_t *addr);
 bt_addr_le_t *zmk_ble_profile_address(uint8_t index);
 
+<<<<<<< HEAD
+int zmk_ble_unpair_all();
+uint8_t zmk_ble_get_active_profile_bt_id(void);
+uint8_t zmk_ble_is_connected(void);
+=======
 bt_addr_le_t *zmk_ble_active_profile_addr(void);
 struct bt_conn *zmk_ble_active_profile_conn(void);
 
@@ -43,6 +52,7 @@ char *zmk_ble_active_profile_name(void);
 int zmk_ble_unpair_all(void);
 
 int zmk_ble_set_device_name(char *name);
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 
 #if IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 int zmk_ble_put_peripheral_addr(const bt_addr_le_t *addr);

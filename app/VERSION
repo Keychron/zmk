@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+VERSION_MAJOR = 1
+VERSION_MINOR = 2
+PATCHLEVEL = 3
+VERSION_TWEAK = 0
+EXTRAVERSION = ZMK
+=======
 # x-release-please-start-major
 VERSION_MAJOR = 0
 # x-release-please-end
@@ -11,3 +18,4 @@ PATCHLEVEL = 0
 # x-release-please-end
 
 VERSION_TWEAK = 0
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66

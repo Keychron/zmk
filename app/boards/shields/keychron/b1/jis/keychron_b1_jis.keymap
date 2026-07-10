@@ -1,0 +1,255 @@
+/*
+ * Copyright (c) 2023 The ZMK Contributors
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/keys.h>
+#include <dt-bindings/zmk/rgb.h>
+#include <dt-bindings/zmk/bt.h>
+#include <dt-bindings/zmk/outputs.h>
+
+/ {
+    ZMK_MACRO(recover, bindings = <&out OUT_RECOVER>;)
+    ZMK_MACRO(change, bindings = <&out OUT_FN>;)
+    ZMK_MACRO(fn_win, bindings = <&out OUT_FN_WIN>;)
+
+    ZMK_MACRO(en_bootloader, bindings = <&bootloader>;)
+    ZMK_MACRO1(MA,bindings=<&kp 0x770000>;)
+
+    long_press_recover:l1 {
+        compatible = "zmk,behavior-hold-tap";
+        label = "l1";
+        #binding-cells = <2>;
+        flavor = "tap-preferred";
+        tapping-term-ms = <3000>;  // delay amount in ms
+        bindings = <&recover>, <&none>;
+    };
+
+    long_press_change:l2{
+        compatible = "zmk,behavior-hold-tap";
+        label = "lp_change";
+        #binding-cells = <2>;
+        flavor = "tap-preferred";
+        tapping-term-ms = <3000>;  // delay amount in ms
+        bindings = <&change>, <&none>;
+    };
+    long_press_bootloader:l3{
+        compatible = "zmk,behavior-hold-tap";
+        label = "lp_bootloader";
+        #binding-cells = <2>;
+        flavor = "tap-preferred";
+        tapping-term-ms = <3000>;  // delay amount in ms
+        bindings = <&en_bootloader>, <&none>;
+    };
+    long_press_fn_win:l4{
+        compatible = "zmk,behavior-hold-tap";
+        label = "lp_fn_win";
+        #binding-cells = <2>;
+        flavor = "tap-preferred";
+        tapping-term-ms = <3000>;   
+        bindings = <&fn_win>, <&none>;
+    };
+   
+
+    combos1 {
+        compatible = "zmk,combos";
+        combo_jz {
+            timeout-ms = <1000>;
+            layers = <1 3>;
+            key-positions = <49 57>; //fn+j+z
+            bindings = <&long_press_recover 0 0>;
+        };
+        combo_xl {
+            timeout-ms = <1000>;
+            layers =< 1 3>;
+            key-positions = <58 51>; //fn+x+l
+            bindings = <&long_press_change 0 0>;
+        };
+        combo_b {
+            timeout-ms = <1000>;
+            layers =< 1 3>;
+            //slow-release = <true>;
+            key-positions = <61>; //fn+b
+            bindings = <&out OUT_BAT>;
+        };
+
+        combo_win_l {
+            timeout-ms = <1000>;
+            layers =< 1 3>;
+            //slow-release = <true>;
+            key-positions = <70>; //fn+win
+            bindings = <&long_press_fn_win 0 0>;
+        };
+
+        combo_t0 {
+            timeout-ms = <10 >;
+            layers =<4>;
+          
+            key-positions = <80 90>;  
+            bindings = <&to 3 >;
+        };
+        combo_t1 {
+            timeout-ms = <10 >;
+            layers =<4>;
+          
+            key-positions = <80 91>;  
+            bindings = <&tog 3 >;
+        };
+        combo_t2 {
+            timeout-ms = <10 >;
+            layers =<4>;
+          
+            key-positions = <80 92>;  
+            bindings = <&sl 3 >;
+        };
+        combo_t3 {
+            timeout-ms = <10 >;
+            layers =<4>;
+          
+            key-positions = <70 93>;  
+            bindings = <&lt 3 SPACE>;
+        };
+        combo_t4 {
+            timeout-ms = <10 >;
+            layers =<4>;
+          
+            key-positions = <81 94>;  
+            bindings = <&sk LSHIFT>;
+        };
+        combo_t5 {
+            timeout-ms = <10 >;
+            layers =<4>;
+          
+            key-positions = <81 93>;  
+            bindings = <&mt LSHIFT SPACE>;
+        };
+        combo_t6 {
+            timeout-ms = <10 >;
+            layers =<4>;
+          
+            key-positions = <81 93>;  
+            bindings = <&gresc>;
+        };
+    };
+
+    td0 {
+        compatible = "zmk,behavior-tap-dance";
+        label = "TAPD_LAYER";
+        #binding-cells = <1>;
+        tapping-term-ms = <350>;
+        bindings =<&mo 0>,<&mo 0>,<&mo 0>,<&mo 0>,<&to 0>;
+    };
+    ZMK_MACRO(bt_pair0, bindings = <&bt BT_PAIR 0>;)
+    ZMK_MACRO(bt_pair1, bindings = <&bt BT_PAIR 1>;)
+    ZMK_MACRO(bt_pair2, bindings = <&bt BT_PAIR 2>;)
+    ZMK_MACRO(bt_pair3, bindings = <&bt BT_PAIR 3>;)
+    ZMK_MACRO(bt_recon_0, bindings = <&bt BT_SEL 0>;)
+    ZMK_MACRO(bt_recon_1, bindings = <&bt BT_SEL 1>;)
+    ZMK_MACRO(bt_recon_2, bindings = <&bt BT_SEL 2>;)
+    ZMK_MACRO(bt_recon_3, bindings = <&bt BT_SEL 3>;)
+    
+
+
+    bt_pair_0: bt_pair_0 {
+        compatible = "zmk,behavior-hold-tap";
+        label = "bt_pair0";
+        #binding-cells = <2>;
+        flavor = "tap-preferred";
+        tapping-term-ms = <3000>;  // delay amount in ms
+        bindings = <&bt_pair0>, <&bt_recon_0>;
+    };
+    bt_pair_1: bt_pair_1 {
+        compatible = "zmk,behavior-hold-tap";
+        label = "bt_pair1";
+        #binding-cells = <2>;
+        flavor = "tap-preferred";
+        tapping-term-ms = <3000>;  // delay amount in ms
+        bindings = <&bt_pair1>, <&bt_recon_1>;
+    };
+    bt_pair_2: bt_pair_2 {
+        compatible = "zmk,behavior-hold-tap";
+        label = "bt_pair2";
+        #binding-cells = <2>;
+        flavor = "tap-preferred";
+        tapping-term-ms = <3000>;  // delay amount in ms
+        bindings = <&bt_pair2>, <&bt_recon_2>;
+    };
+    bt_pair_3: bt_pair_3 {
+        compatible = "zmk,behavior-hold-tap";
+        label = "bt_pair3";
+        #binding-cells = <2>;
+        flavor = "tap-preferred";
+        tapping-term-ms = <3000>;  // delay amount in ms
+        bindings = <&bt_pair3>, <&bt_recon_3>;
+    };
+    uc:user_custom {
+        compatible = "zmk,behavior-key-press";
+        label ="user_custom";
+        #binding-cells =<1>;
+    };
+
+	keymap {
+    	compatible = "zmk,keymap";
+            //mac
+        default_layer {
+        bindings = <
+          //ESC         //f1                    //f2                //f3                                    //f4                //f5                //f6            //f7            //f8                //f9        //f10       //f11               //f12               //DEL                                              
+        &kp ESC     &kp C_BRIGHTNESS_DEC    &kp C_BRIGHTNESS_INC    &kp C_AC_DESKTOP_SHOW_ALL_WINDOWS   &kp  C_AC_MAC_LAUNCH    &kp C_AC_SEARCH     &kp C_AL_LOCK   &kp C_PREVIOUS  &kp C_PLAY_PAUSE    &kp C_NEXT  &kp C_MUTE  &kp C_VOLUME_DOWN   &kp C_VOLUME_UP     &kp DEL  
+        &kp GRAVE   &kp N1                  &kp N2                  &kp N3                              &kp N4                  &kp N5              &kp N6          &kp N7          &kp N8              &kp N9      &kp N0      &kp MINUS           &kp EQUAL           &kp INT3    &kp BSPC 
+        &kp TAB     &kp Q                   &kp W                   &kp E                               &kp R                   &kp T               &kp Y           &kp U           &kp I               &kp O       &kp P       &kp LBKT            &kp RBKT            
+        &kp CLCK    &kp A                   &kp S                   &kp D                               &kp F                   &kp G               &kp H           &kp J           &kp K               &kp L       &kp SEMI    &kp SQT             &kp NUHS            &kp RET 
+        &kp LSHFT                           &kp Z                   &kp X                               &kp C                   &kp V               &kp B           &kp N           &kp M               &kp COMMA   &kp DOT     &kp FSLH            &kp INT1            &kp RSHFT 
+        &kp LCTRL   &uc LALT                &uc LCMD                &kp LANG2       &kp SPACE                                                       &kp LANG1                       &uc RCMD            &mo 1       &kp LEFT    &kp UP              &kp DOWN            &kp RIGHT   
+        &mo 2       &out OUT_BLE            &out OUT_24G            &out OUT_CHG                        &out OUT_CHGD 
+            >;
+        };
+        //mac
+        layer_one  {
+        bindings = < 
+        &trans      &kp F1                  &kp F2                  &kp F3                              &kp F4                  &kp F5              &kp F6          &kp F7          &kp F8              &kp F9      &kp F10     &kp F11             &kp F12             &trans    
+        &trans      &bt_pair_0 0 0          &bt_pair_1 0 0          &bt_pair_2 0 0                      &bt_pair_3 0 0          &trans              &trans          &trans          &trans              &trans      &trans      &trans              &kp C_AC_SEARCH     &trans    &trans  
+        &trans      &trans                  &trans                  &trans                              &trans                  &trans              &trans          &trans          &kp INS             &trans      &trans      &trans              &trans              
+        &trans      &trans                  &trans                  &trans                              &trans                  &trans              &trans          &trans          &trans              &trans      &trans      &trans              &trans              &trans
+        &trans                              &trans                  &trans                              &trans                  &trans              &trans          &trans          &trans              &trans      &trans      &trans              &trans              &uc LC(LG(SPACE))
+        &trans      &trans                  &trans                  &trans                  &trans                                                                  &trans                          &kp RCTRL           &trans        &kp HOME   &kp PG_UP   &kp PG_DN    &kp END  
+        //
+        &none       &none                   &none                   &none                               &none
+            >;
+        };
+        //win
+        layer_two {
+ 		bindings = <
+        &kp ESC 	&kp F1 	               &kp F2 	                &kp F3 	                            &kp F4 	                &kp F5 	            &kp F6 	        &kp F7 	        &kp F8 	            &kp F9 	     &kp F10 	&kp F11 	         &kp F12 	         &kp DEL     
+        &kp GRAVE	&kp N1 	               &kp N2 	                &kp N3 	                            &kp N4 	                &kp N5 	            &kp N6 	        &kp N7 	        &kp N8 	            &kp N9 	     &kp N0     &kp MINUS 	         &kp EQUAL 	         &kp INT3        &kp BSPC
+        &kp TAB 	&kp Q 	               &kp W                    &kp E 	                            &kp R 	                &kp T               &kp Y 	        &kp U 	        &kp I 	            &kp O 	     &kp P 		&kp LBKT 	         &kp RBKT 	         
+        &kp CLCK 	&kp A 	               &kp S 	                &kp D 	                            &kp F 	                &kp G 	            &kp H 	        &kp J 	        &kp K 	            &kp L 	     &kp SEMI 	&kp SQT              &kp NUHS            &kp RET
+        &kp LSHFT                          &kp Z 	                &kp X 	                            &kp C 	                &kp V 	            &kp B 	        &kp N 	        &kp M 	            &kp COMMA    &kp DOT    &kp FSLH             &kp INT1            &kp RSHFT
+        &kp LCTRL 	&kp LGUI               &kp LALT                 &kp INT5             &kp SPACE              		                                            &kp INT4                       &kp RALT 	        &mo 3 		  &kp LEFT 	 &kp UP      &kp DOWN 	&kp RIGHT 	
+        //
+        &none       &out OUT_BLE           &out OUT_24G             &out OUT_CHG                        &out OUT_CHGD 
+            >;
+        };
+        //win
+        layer_three {
+        bindings = < 
+                    //f1                    //f2                    //f3                                //f4                        //f5            //f6              //f7            //f8              //f9        //f10           //f11                         //f12          
+        &trans  &kp C_BRIGHTNESS_DEC    &kp C_BRIGHTNESS_INC        &uc LG(TAB)                         &uc LG(E)               &kp C_AC_SEARCH     &uc LG(L)       &kp C_PREVIOUS  &kp C_PLAY_PAUSE    &kp C_NEXT  &kp C_MUTE  &kp C_VOLUME_DOWN           &kp C_VOLUME_UP      &trans
+        &trans  &bt_pair_0 0 0          &bt_pair_1 0 0              &bt_pair_2 0 0                      &bt_pair_3 0 0          &trans              &trans          &trans          &trans              &trans      &trans      &trans                      &kp C_AL_CALC        &trans     &trans
+        &trans  &trans                  &trans                      &trans                              &trans                  &trans              &trans          &trans          &kp INS             &trans      &trans      &trans                      &trans                     
+        &trans  &trans                  &trans                      &trans                              &trans                  &trans              &trans          &trans          &trans              &trans      &trans      &trans                      &trans               &trans  
+        &trans                          &trans                      &trans                              &trans                  &trans              &trans          &trans          &trans              &trans      &trans      &trans                      &trans               &uc LG(DOT) 
+        &trans  &trans                  &trans                      &trans     &trans                                                                               &trans                              &kp RCTRL           &trans      &kp HOME    &kp PG_UP    &kp PG_DN   &kp END    
+        //
+        &none   &none                   &none                       &none                               &none
+            >;
+        };
+   
+
+    	
+    
+	};
+};
+
+	

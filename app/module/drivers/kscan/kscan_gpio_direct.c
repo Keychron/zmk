@@ -14,7 +14,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/pm/device.h>
 #include <zephyr/sys/util.h>
-
+#include <hal/nrf_gpio.h>
 #include <zmk/debounce.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
@@ -77,6 +77,9 @@ struct kscan_direct_config {
     int32_t poll_period_ms;
     bool toggle_mode;
 };
+static uint8_t long_poll;
+bool is_usb_power_present(void);
+void switch_to_usb(void);
 
 #if USE_INTERRUPTS
 static int kscan_direct_interrupt_configure(const struct device *dev, const gpio_flags_t flags) {
@@ -153,7 +156,7 @@ static void kscan_direct_read_continue(const struct device *dev) {
     const struct kscan_direct_config *config = dev->config;
     struct kscan_direct_data *data = dev->data;
 
-    data->scan_time += config->debounce_scan_period_ms;
+    data->scan_time += long_poll?400: config->debounce_scan_period_ms;
 
     k_work_reschedule(&data->work, K_TIMEOUT_ABS_MS(data->scan_time));
 }
@@ -188,14 +191,16 @@ static int kscan_direct_read(const struct device *dev) {
             LOG_ERR("Failed to read port %s: %i", gpio->spec.port->name, active);
             return active;
         }
-
+        
         zmk_debounce_update(&data->pin_state[gpio->index], active, config->debounce_scan_period_ms,
                             &config->debounce_config);
+        // if(!long_poll)
+        // LOG_DBG("pin:%d,v:%d,counter:%d",gpio->spec.pin,active,data->pin_state[gpio->index].counter);
     }
 
     // Process the new state.
     bool continue_scan = false;
-
+    bool changed=false;
     for (int i = 0; i < data->inputs.len; i++) {
         const struct kscan_gpio *gpio = &data->inputs.gpios[i];
         struct zmk_debounce_state *deb_state = &data->pin_state[gpio->index];
@@ -210,9 +215,14 @@ static int kscan_direct_read(const struct device *dev) {
             }
         }
 
+<<<<<<< HEAD
+        continue_scan = continue_scan || zmk_debounce_is_active(state);
+        if(state->counter) changed =true;
+=======
         continue_scan = continue_scan || zmk_debounce_is_active(deb_state);
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
     }
-
+    long_poll = !changed;
     if (continue_scan) {
         // At least one key is pressed or the debouncer has not yet decided if
         // it is pressed. Poll quickly until everything is released.
@@ -415,3 +425,37 @@ static const struct kscan_driver_api kscan_direct_api = {
                           &kscan_direct_api);
 
 DT_INST_FOREACH_STATUS_OKAY(KSCAN_DIRECT_INIT);
+
+
+void kscan_gpio_direct_enter_sleep(void)
+{
+    const struct kscan_direct_data *data = &kscan_direct_data_0;
+    //set p1.8/p1.9 to wakeup from system_off
+    //note: can't set pullup in dts!!!
+    for (int i = 0; i < 2; i++) {
+        const struct gpio_dt_spec *gpio = &data->inputs.gpios[i].spec;
+        //NOTE:can't set interrupts more than 8 ;
+        // gpio_pin_interrupt_configure_dt(gpio, GPIO_INT_LEVEL_ACTIVE);
+        uint32_t pin_num =NRF_GPIO_PIN_MAP(1,gpio->pin);
+        // LOG_ERR("pin value:%d",gpio_pin_get_raw(gpio->port,gpio->pin));
+        {
+            // LOG_ERR("set sense ,pin:%d",pin_num);
+            nrf_gpio_cfg_input(pin_num, NRF_GPIO_PIN_NOPULL);
+            nrf_gpio_pin_sense_t sense_config =GPIO_PIN_CNF_SENSE_Low;
+            nrf_gpio_cfg_sense_set(pin_num, sense_config);
+        } 
+    }
+}
+uint8_t get_mode_status(void)
+{
+    uint8_t status =0;
+    const struct kscan_direct_data *data = &kscan_direct_data_0;
+
+    for (int i = 0; i < 2; i++) {
+        const struct gpio_dt_spec *gpio = &data->inputs.gpios[i].spec;
+        status |= gpio_pin_get_raw(gpio->port,gpio->pin)<<(i);
+
+    }
+    LOG_ERR("mode status:%x",status);
+    return status;
+}

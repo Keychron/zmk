@@ -75,6 +75,13 @@
 #define ZMK_HID_REPORT_ID_KEYBOARD 0x01
 #define ZMK_HID_REPORT_ID_LEDS 0x01
 #define ZMK_HID_REPORT_ID_CONSUMER 0x02
+<<<<<<< HEAD
+#define ZMK_HID_REPORT_ID_SYSTEM   0x03
+#define ZMK_HID_REPORT_ID_MOUSE    0x04
+
+#define HID_USAGE_2(a,b)        \
+    HID_ITEM(HID_ITEM_TAG_USAGE, HID_ITEM_TYPE_LOCAL, 2), a,b 
+=======
 #define ZMK_HID_REPORT_ID_MOUSE 0x03
 
 #ifndef HID_ITEM_TAG_PUSH
@@ -100,6 +107,7 @@
 #define HID_USAGE16(a, b) HID_ITEM(HID_ITEM_TAG_USAGE, HID_ITEM_TYPE_LOCAL, 2), a, b
 
 #define HID_USAGE16_SINGLE(a) HID_USAGE16((a & 0xFF), ((a >> 8) & 0xFF))
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 
 static const uint8_t zmk_hid_report_desc[] = {
     HID_USAGE_PAGE(HID_USAGE_GEN_DESKTOP),
@@ -121,6 +129,22 @@ static const uint8_t zmk_hid_report_desc[] = {
     HID_REPORT_COUNT(0x01),
     HID_INPUT(ZMK_HID_MAIN_VAL_CONST | ZMK_HID_MAIN_VAL_VAR | ZMK_HID_MAIN_VAL_ABS),
 
+<<<<<<< HEAD
+    //add led output
+    HID_REPORT_SIZE(1),              
+    HID_REPORT_COUNT(5),                
+    HID_USAGE_PAGE(HID_USAGE_GEN_LEDS),      
+    /* HID_USAGE_MINIMUM(Num Lock) */        
+    HID_USAGE_MIN8(1),               
+    /* HID_USAGE_MAXIMUM(Kana) */           
+    HID_USAGE_MAX8(5),               
+    /* HID_OUTPUT(Data,Var,Abs) */           
+    HID_OUTPUT(0x02),                
+    HID_REPORT_SIZE(3),              
+    HID_REPORT_COUNT(1),                 
+    /* HID_OUTPUT(Cnst,Var,Abs) */           
+    HID_OUTPUT(0x03),  
+=======
 #if IS_ENABLED(CONFIG_ZMK_HID_INDICATORS)
 
     HID_USAGE_PAGE(HID_USAGE_LED),
@@ -136,6 +160,7 @@ static const uint8_t zmk_hid_report_desc[] = {
     HID_OUTPUT(ZMK_HID_MAIN_VAL_CONST | ZMK_HID_MAIN_VAL_VAR | ZMK_HID_MAIN_VAL_ABS),
 
 #endif // IS_ENABLED(CONFIG_ZMK_HID_INDICATORS)
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 
     HID_USAGE_PAGE(HID_USAGE_KEY),
 
@@ -185,6 +210,43 @@ static const uint8_t zmk_hid_report_desc[] = {
     HID_INPUT(ZMK_HID_MAIN_VAL_DATA | ZMK_HID_MAIN_VAL_ARRAY | ZMK_HID_MAIN_VAL_ABS),
     HID_END_COLLECTION,
 
+<<<<<<< HEAD
+    HID_USAGE_PAGE(HID_USAGE_GEN_DESKTOP),
+    HID_USAGE(HID_USAGE_GD_MOUSE),
+    HID_COLLECTION(HID_COLLECTION_APPLICATION),
+        HID_REPORT_ID(ZMK_HID_REPORT_ID_MOUSE),
+        HID_USAGE(HID_USAGE_GEN_DESKTOP_POINTER),
+        HID_COLLECTION(HID_COLLECTION_PHYSICAL),
+            HID_USAGE_PAGE(HID_USAGE_GEN_BUTTON),
+            HID_USAGE_MIN8(0x01),
+            HID_USAGE_MAX8(0x08),
+            HID_LOGICAL_MIN8(0x00),
+            HID_LOGICAL_MAX8(0x01),
+            HID_REPORT_SIZE(1),              
+            HID_REPORT_COUNT(8),
+            HID_INPUT(ZMK_HID_MAIN_VAL_DATA | ZMK_HID_MAIN_VAL_VAR | ZMK_HID_MAIN_VAL_ABS),
+
+            HID_USAGE_PAGE(HID_USAGE_GEN_DESKTOP),  
+            HID_USAGE(HID_USAGE_GEN_DESKTOP_X),
+            HID_USAGE(HID_USAGE_GEN_DESKTOP_Y), 
+            HID_USAGE(HID_USAGE_GEN_DESKTOP_WHEEL),
+            HID_LOGICAL_MIN8(-127),
+            HID_LOGICAL_MAX8(127), 
+            HID_REPORT_SIZE(8),
+            HID_REPORT_COUNT(3),
+            HID_INPUT(ZMK_HID_MAIN_VAL_DATA | ZMK_HID_MAIN_VAL_VAR | ZMK_HID_MAIN_VAL_REL),
+
+            HID_USAGE_PAGE(HID_USAGE_CONSUMER),  
+            HID_USAGE_2(0x38,0x02), //AC Pan
+            HID_LOGICAL_MIN8(-127),
+            HID_LOGICAL_MAX8(127), 
+            HID_REPORT_SIZE(8),
+            HID_REPORT_COUNT(1),
+            HID_INPUT(ZMK_HID_MAIN_VAL_DATA | ZMK_HID_MAIN_VAL_VAR | ZMK_HID_MAIN_VAL_REL),
+        HID_END_COLLECTION,
+    HID_END_COLLECTION,
+
+=======
 #if IS_ENABLED(CONFIG_ZMK_POINTING)
     HID_USAGE_PAGE(HID_USAGE_GD),
     HID_USAGE(HID_USAGE_GD_MOUSE),
@@ -253,6 +315,7 @@ static const uint8_t zmk_hid_report_desc[] = {
     HID_END_COLLECTION,
     HID_END_COLLECTION,
 #endif // IS_ENABLED(CONFIG_ZMK_POINTING)
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 };
 
 #if IS_ENABLED(CONFIG_ZMK_USB_BOOT)

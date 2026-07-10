@@ -1,0 +1,36 @@
+# Copyright (c) 2023 The ZMK Contributors
+# SPDX-License-Identifier: MIT
+
+if BOARD_KEYCHRON
+
+config ZMK_KEYBOARD_NAME
+    default "Keychron B6 Pro"
+
+if USB_DEVICE_STACK
+
+config USB_NRFX
+    default y
+
+endif # USB_DEVICE_STACK
+
+config BT_CTLR
+    default BT
+
+config ZMK_BLE
+    default y
+
+config ZMK_USB
+    default y
+
+config ZMK_LEDS_GPIO 
+    bool "enable gpio leds"
+    default y
+    select LED
+
+config ZMK_LEDS_PWM
+    bool "enable pwm leds"
+    default n 
+    select PWM
+    select LED_PWM
+
+endif # BOARD_KEYCHRON

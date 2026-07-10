@@ -40,6 +40,9 @@ static zmk_mod_flags_t explicit_modifiers = 0;
 static zmk_mod_flags_t implicit_modifiers = 0;
 static zmk_mod_flags_t masked_modifiers = 0;
 
+extern uint8_t macro_running;
+bool get_fn_win_lock(void);
+
 #define SET_MODIFIERS(mods)                                                                        \
     {                                                                                              \
         keyboard_report.body.modifiers = (mods & ~masked_modifiers) | implicit_modifiers;          \
@@ -51,6 +54,13 @@ static zmk_mod_flags_t masked_modifiers = 0;
 zmk_mod_flags_t zmk_hid_get_explicit_mods(void) { return explicit_modifiers; }
 
 int zmk_hid_register_mod(zmk_mod_t modifier) {
+    if(get_fn_win_lock() && (modifier == 7 || modifier ==3)) 
+    {
+        explicit_modifier_counts[modifier]=0;
+        LOG_ERR("not send modifier:%d",modifier);
+        return 0;
+    }
+    
     explicit_modifier_counts[modifier]++;
     LOG_DBG("Modifier %d count %d", modifier, explicit_modifier_counts[modifier]);
     WRITE_BIT(explicit_modifiers, modifier, true);
@@ -65,6 +75,12 @@ int zmk_hid_unregister_mod(zmk_mod_t modifier) {
         return -EINVAL;
     }
     explicit_modifier_counts[modifier]--;
+
+    if(macro_running)
+    {
+        explicit_modifier_counts[modifier]=0;
+    }
+
     LOG_DBG("Modifier %d count: %d", modifier, explicit_modifier_counts[modifier]);
     if (explicit_modifier_counts[modifier] == 0) {
         LOG_DBG("Modifier %d released", modifier);
@@ -178,7 +194,7 @@ static inline bool check_keyboard_usage(zmk_key_t usage) {
 
 #define TOGGLE_KEYBOARD(match, val)                                                                \
     for (int idx = 0; idx < CONFIG_ZMK_HID_KEYBOARD_REPORT_SIZE; idx++) {                          \
-        if (keyboard_report.body.keys[idx] != match) {                                             \
+        if (keyboard_report.body.keys[idx] != match  && keyboard_report.body.keys[idx] != val ) {                                             \
             continue;                                                                              \
         }                                                                                          \
         keyboard_report.body.keys[idx] = val;                                                      \

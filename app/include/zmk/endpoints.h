@@ -28,6 +28,10 @@
 #define ZMK_ENDPOINT_BLE_COUNT 0
 #endif
 
+enum {
+	REBOOT_ENDPOINT_BLE=0xc0,
+	REBOOT_ENDPOINT_24G
+};
 /**
  * The total number of different (struct zmk_endpoint_instance) values that can
  * be selected.
@@ -74,6 +78,11 @@ enum zmk_transport zmk_endpoint_get_preferred_transport(void);
  */
 int zmk_endpoint_toggle_preferred_transport(void);
 
+<<<<<<< HEAD
+int zmk_endpoints_send_report(uint16_t usage_page);
+
+uint8_t get_current_transport(void);
+=======
 /**
  * Gets the endpoint instance that will be preferred if it is connected.
  */
@@ -110,3 +119,4 @@ int zmk_endpoint_send_mouse_report();
  * Clears all HID reports for the selected endpoint.
  */
 void zmk_endpoint_clear_reports(void);
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66

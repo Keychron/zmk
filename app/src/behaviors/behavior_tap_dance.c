@@ -119,7 +119,18 @@ static inline int press_tap_dance_behavior(struct active_tap_dance *tap_dance, i
         .source = tap_dance->source,
 #endif
     };
+<<<<<<< HEAD
+    LOG_DBG("binding:%s,p1:%d",binding.behavior_dev,binding.param1);
+    if((tap_dance->param1 &0x520000) ==0x520000) 
+    {
+        uint8_t layer=tap_dance->param1 &0x1f;
+        LOG_DBG("to layer:%d",layer);
+        binding.param1= layer;
+    }
+    return behavior_keymap_binding_pressed(&binding, event);
+=======
     return zmk_behavior_invoke_binding(&binding, event, true);
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 }
 
 static inline int release_tap_dance_behavior(struct active_tap_dance *tap_dance,
@@ -132,6 +143,12 @@ static inline int release_tap_dance_behavior(struct active_tap_dance *tap_dance,
         .source = tap_dance->source,
 #endif
     };
+    if((tap_dance->param1 &0x520000) ==0x520000) 
+    {
+        uint8_t layer=tap_dance->param1 &0x1f;
+        LOG_DBG("to layer:%d",layer);
+        binding.param1= layer;
+    }
     clear_tap_dance(tap_dance);
     return zmk_behavior_invoke_binding(&binding, event, false);
 }
@@ -150,6 +167,10 @@ static int on_tap_dance_binding_pressed(struct zmk_behavior_binding *binding,
         LOG_DBG("%d created new tap dance", event.position);
     }
     tap_dance->is_pressed = true;
+    LOG_DBG("binding:%s,p1:%d,counter:%d",binding->behavior_dev,binding->param1, tap_dance->counter);
+    if(memcmp(binding->behavior_dev,"TAPD_LAYER",10)==0 )
+        tap_dance->param1 = binding->param1|0x520000;
+
     LOG_DBG("%d tap dance pressed", event.position);
     stop_timer(tap_dance);
     // Increment the counter on keypress. If the counter has reached its maximum

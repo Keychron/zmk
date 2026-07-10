@@ -1,0 +1,14 @@
+# Copyright (c) 2024 Keychron
+# SPDX-License-Identifier: MIT
+
+
+
+config SHIELD_KEYCHRON_B1
+    bool    
+
+config SHIELD_KEYCHRON_B1_US
+    def_bool $(shields_list_contains,keychron_b1_us)
+    select SHIELD_KEYCHRON_B1
+
+
+

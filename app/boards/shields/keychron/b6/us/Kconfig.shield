@@ -1,0 +1,9 @@
+# Copyright (c) 2024 Keychron
+# SPDX-License-Identifier: MIT
+
+
+config SHIELD_KEYCHRON_B6_US
+    def_bool $(shields_list_contains,keychron_b6_us)
+
+
+

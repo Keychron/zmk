@@ -11,3 +11,27 @@ Check out the website to learn more: https://zmk.dev/.
 You can also come join our [ZMK Discord Server](https://zmk.dev/community/discord/invite).
 
 To review features, check out the [feature overview](https://zmk.dev/docs/). ZMK is under active development, and new features are listed with the [enhancement label](https://github.com/zmkfirmware/zmk/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement) in GitHub. Please feel free to add 👍 to the issue description of any requests to upvote the feature.
+
+[Keychron](https://keychron.com/) use zmk source code for Bpro series keyboards ,have made big changes fro Bpro, also add proprietary 2.4g communication.
+
+To build the firmware ,for example: keychorn b1 pro
+
+prepare:
+```    
+    mkdir keychron
+    cd keychron
+    git clone -b keychron_bpro https://github.com/keychron/zmk.git 
+    cd zmk
+    west init -l app/
+    west update
+```
+patch zephyr:
+```
+    cd zephyr
+    git am ../001-esb-nrf-fix.patch
+```
+build firmware:
+```
+    cd app
+    west build -b keychron -p -- -DSHIELD=keychron_b1_us
+```

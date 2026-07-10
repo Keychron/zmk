@@ -21,10 +21,32 @@
 #include <zmk/events/usb_conn_state_changed.h>
 #include <zmk/events/endpoint_changed.h>
 
+#include <hal/nrf_power.h>
+#include <zephyr/sys/reboot.h>
+
 #include <zephyr/logging/log.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
+<<<<<<< HEAD
+#include "./launcher/mousekey.h"
+
+extern uint8_t get_hardware_select_transport(void);
+extern int zmk_ble_init(const struct device *_arg);
+#if CONFIG_ZMK_NRF_24G
+extern void zmk_24g_init(void);
+extern int zmk_24g_send_report(uint8_t *data,uint8_t len) ;
+#endif 
+int zmk_hog_send_mouse_report(report_mouse_t *report);
+void keyboad_led_set_onoff(uint8_t led_state);
+void bt_24g_switch_reset(void);
+uint8_t get_mode_status(void);
+
+// #define DEFAULT_TRANSPORT                                                                          
+//     COND_CODE_1(IS_ENABLED(CONFIG_ZMK_BLE), (ZMK_TRANSPORT_BLE), (ZMK_TRANSPORT_USB))
+
+#define DEFAULT_TRANSPORT ZMK_TRANSPORT_USB
+=======
 // Name of the subtree for endpoint-related settings
 #define SETTING_SUBTREE "endpoints"
 
@@ -45,6 +67,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 #else
 #define DEFAULT_TRANSPORT ZMK_TRANSPORT_NONE
 #endif
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 
 static struct zmk_endpoint_instance current_instance = {};
 
@@ -53,6 +76,11 @@ static enum zmk_transport preferred_transport = DEFAULT_TRANSPORT;
 
 static void update_current_endpoint(void);
 
+void switch_to_usb(void)
+{
+    zmk_endpoints_select_transport(ZMK_TRANSPORT_USB);
+}
+#if 0
 #if IS_ENABLED(CONFIG_SETTINGS)
 static void endpoints_save_preferred_work(struct k_work *work) {
     settings_save_one(SETTING_PREFERRED_TRANSPORT, &preferred_transport,
@@ -69,6 +97,7 @@ static int endpoints_save_preferred(void) {
     return 0;
 #endif
 }
+#endif 
 
 bool zmk_endpoint_instance_eq(struct zmk_endpoint_instance a, struct zmk_endpoint_instance b) {
     if (a.transport != b.transport) {
@@ -82,6 +111,11 @@ bool zmk_endpoint_instance_eq(struct zmk_endpoint_instance a, struct zmk_endpoin
 
     case ZMK_TRANSPORT_BLE:
         return a.ble.profile_index == b.ble.profile_index;
+    case ZMK_TRANSPORT_24G:
+        return true;
+        break;
+    default :
+        return false;
     }
 
     LOG_ERR("Invalid transport %d", a.transport);
@@ -98,6 +132,8 @@ int zmk_endpoint_instance_to_str(struct zmk_endpoint_instance endpoint, char *st
 
     case ZMK_TRANSPORT_BLE:
         return snprintf(str, len, "BLE:%d", endpoint.ble.profile_index);
+    case ZMK_TRANSPORT_24G:
+        return snprintf(str, len, "24G");
 
     default:
         return snprintf(str, len, "Invalid");
@@ -118,6 +154,10 @@ int zmk_endpoint_instance_to_index(struct zmk_endpoint_instance endpoint) {
 
     case ZMK_TRANSPORT_BLE:
         return INSTANCE_INDEX_OFFSET_BLE + endpoint.ble.profile_index;
+    case ZMK_TRANSPORT_24G:
+        break;
+    default :
+        break;  
     }
 
     LOG_ERR("Invalid transport %d", endpoint.transport);
@@ -127,14 +167,23 @@ int zmk_endpoint_instance_to_index(struct zmk_endpoint_instance endpoint) {
 int zmk_endpoint_set_preferred_transport(enum zmk_transport transport) {
     LOG_DBG("Selected endpoint transport %d", transport);
 
-    if (preferred_transport == transport) {
+    // if (preferred_transport == transport) {
+    //     return 0;
+    // }
+
+    // preferred_transport = transport;
+
+    // endpoints_save_preferred();
+    if(current_instance.transport == transport)
+    {
         return 0;
     }
-
+    if(transport == ZMK_TRANSPORT_NONE)
+    {
+        current_instance.transport = transport;
+        return 0;
+    }
     preferred_transport = transport;
-
-    endpoints_save_preferred();
-
     update_current_endpoint();
 
     return 0;
@@ -203,6 +252,20 @@ static int send_keyboard_report(void) {
         LOG_ERR("BLE HOG endpoint is not supported");
         return -ENOTSUP;
 #endif /* IS_ENABLED(CONFIG_ZMK_BLE) */
+#if CONFIG_ZMK_NRF_24G      
+    case ZMK_TRANSPORT_24G:
+        {
+
+            int err=zmk_24g_send_report((uint8_t *)keyboard_report, sizeof(*keyboard_report));
+            if (err) {
+                LOG_ERR("FAILED TO SEND OVER HOG: %d", err);
+            }
+            return err;
+        }
+        break;
+#endif    
+    default:
+        break;     
     }
     }
 
@@ -240,6 +303,19 @@ static int send_consumer_report(void) {
         LOG_ERR("BLE HOG endpoint is not supported");
         return -ENOTSUP;
 #endif /* IS_ENABLED(CONFIG_ZMK_BLE) */
+#if CONFIG_ZMK_NRF_24G      
+     case ZMK_TRANSPORT_24G:
+        {
+            int err=zmk_24g_send_report((uint8_t *)consumer_report, sizeof(*consumer_report));
+            if (err) {
+                LOG_ERR("FAILED TO SEND OVER HOG: %d", err);
+            }
+            return err;
+        }
+        break;
+#endif        
+     default:
+        break;
     }
     }
 
@@ -255,6 +331,9 @@ int zmk_endpoint_send_report(uint16_t usage_page) {
 
     case HID_USAGE_CONSUMER:
         return send_consumer_report();
+    case HID_USAGE_GEN_BUTTON:
+         mousekey_send();
+         return 0;
     }
 
     LOG_ERR("Unsupported usage page %d", usage_page);
@@ -404,7 +483,7 @@ SETTINGS_STATIC_HANDLER_DEFINE(endpoints, SETTING_SUBTREE, NULL, endpoint_settin
                                endpoint_settings_commit, NULL);
 
 #endif /* IS_ENABLED(CONFIG_SETTINGS) */
-
+#if 0
 static bool is_usb_ready(void) {
 #if IS_ENABLED(CONFIG_ZMK_USB)
     return zmk_usb_is_hid_ready();
@@ -415,7 +494,7 @@ static bool is_usb_ready(void) {
 
 static bool is_ble_ready(void) {
 #if IS_ENABLED(CONFIG_ZMK_BLE)
-    return zmk_ble_active_profile_is_connected();
+    return zmk_ble_is_connected();//zmk_ble_active_profile_is_connected();
 #else
     return false;
 #endif
@@ -450,20 +529,58 @@ static enum zmk_transport get_selected_transport(void) {
         break;
     }
 
+<<<<<<< HEAD
+    if (is_usb_ready()) {
+        LOG_DBG("Only USB is ready.");
+        return ZMK_TRANSPORT_USB;
+    }
+
+    LOG_DBG("No endpoint transports are ready.");
+    return current_instance.transport;// DEFAULT_TRANSPORT;
+=======
     LOG_DBG("Preferred endpoint transport is %d but no transports are ready", preferred_transport);
     return ZMK_TRANSPORT_NONE;
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 }
-
+#endif
+uint8_t get_current_transport(void)
+{
+    return current_instance.transport;
+}
+#if 0
 static struct zmk_endpoint_instance get_selected_instance(void) {
     return get_instance_from_transport(get_selected_transport());
 }
+#endif 
 
+<<<<<<< HEAD
+static int zmk_endpoints_init(const struct device *_arg) {
+#if 0// IS_ENABLED(CONFIG_SETTINGS)
+    settings_subsys_init();
+
+    int err = settings_register(&endpoints_handler);
+    if (err) {
+        LOG_ERR("Failed to register the endpoints settings handler (err %d)", err);
+        return err;
+    }
+
+    k_work_init_delayable(&endpoints_save_work, endpoints_save_preferred_work);
+
+    // settings_load_subtree("endpoints");
+=======
 static int zmk_endpoints_init(void) {
 #if IS_ENABLED(CONFIG_SETTINGS)
     k_work_init_delayable(&endpoints_save_work, endpoints_save_preferred_work);
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 #endif
 
-    current_instance = get_selected_instance();
+    uint32_t reason_reset_pin = nrf_power_resetreas_get(NRF_POWER) & POWER_RESETREAS_RESETPIN_Msk;
+    if (reason_reset_pin) {
+        LOG_DBG("reason_reset_pin");
+        nrf_power_resetreas_clear(NRF_POWER, POWER_RESETREAS_RESETPIN_Msk);
+    }
+    
+    current_instance.transport =ZMK_TRANSPORT_NONE;//ZMK_TRANSPORT_USB;
 
     return 0;
 }
@@ -475,18 +592,57 @@ void zmk_endpoint_clear_reports(void) {
     zmk_hid_mouse_clear();
 #endif // IS_ENABLED(CONFIG_ZMK_POINTING)
 
+<<<<<<< HEAD
+    zmk_endpoints_send_report(HID_USAGE_KEY);
+    zmk_endpoints_send_report(HID_USAGE_CONSUMER);
+=======
     zmk_endpoint_send_report(HID_USAGE_KEY);
     zmk_endpoint_send_report(HID_USAGE_CONSUMER);
 }
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
 
+    keyboad_led_set_onoff(0);
+    void zmk_24g_endpoint_disconnect(void);
+    void zmk_ble_endpoint_disconnect(void);
+    zmk_24g_endpoint_disconnect();
+    zmk_ble_endpoint_disconnect();
+}
+void led_power_on(void);
 static void update_current_endpoint(void) {
-    struct zmk_endpoint_instance new_instance = get_selected_instance();
+    LOG_DBG("curr:%d,new:%d",current_instance.transport,preferred_transport);
+    struct zmk_endpoint_instance new_instance ={.transport = preferred_transport};// get_selected_instance();
 
     if (!zmk_endpoint_instance_eq(new_instance, current_instance)) {
         // Cancel all current keypresses so keys don't stay held on the old endpoint.
+<<<<<<< HEAD
+        if(current_instance.transport !=ZMK_TRANSPORT_NONE)
+            disconnect_current_endpoint();
+=======
         zmk_endpoint_clear_reports();
 
+>>>>>>> ead91ca094c6cd778574f73b9ae011ddab611c66
         current_instance = new_instance;
+        led_power_on();
+        
+        switch(current_instance.transport)
+        {
+            case ZMK_TRANSPORT_BLE:
+                LOG_DBG("change to ble");
+                zmk_ble_init(NULL);
+                break;
+#if CONFIG_ZMK_NRF_24G                  
+            case ZMK_TRANSPORT_24G:
+                LOG_DBG("change to 24g");                
+                zmk_24g_init();
+                break;
+#endif                
+            case ZMK_TRANSPORT_USB:
+                LOG_ERR("usb_dc_reset");
+                usb_dc_reset();
+                break;
+            default:
+                break;
+        }
 
         char endpoint_str[ZMK_ENDPOINT_STR_LEN];
         zmk_endpoint_instance_to_str(current_instance, endpoint_str, sizeof(endpoint_str));
@@ -497,8 +653,81 @@ static void update_current_endpoint(void) {
 }
 
 static int endpoint_listener(const zmk_event_t *eh) {
-    update_current_endpoint();
+
+    const struct zmk_usb_conn_state_changed *ev = as_zmk_usb_conn_state_changed(eh);
+    if(ev)
+    {
+        LOG_DBG("usb state:%d",ev->conn_state);
+        if(ev->conn_state == ZMK_USB_CONN_HID)
+        {
+            if(current_instance.transport ==ZMK_TRANSPORT_USB)
+            {
+                LOG_DBG("usb status:%d",zmk_usb_get_status());
+
+                if(zmk_usb_get_status()==USB_DC_SUSPEND)
+                {
+                    
+                    keyboad_led_set_onoff(0);
+                }
+            }
+            if(get_hardware_select_transport()==0 && get_mode_status()==3)
+            {
+                preferred_transport = ZMK_TRANSPORT_USB;
+                update_current_endpoint();
+            }
+        }
+        else if(ev->conn_state == ZMK_USB_CONN_NONE)
+        {
+            preferred_transport =get_hardware_select_transport();
+            update_current_endpoint();
+        }
+
+    }
+    
     return 0;
+}
+
+
+int host_mouse_send(report_mouse_t *rp) {
+   
+    switch (current_instance.transport) {
+#if IS_ENABLED(CONFIG_ZMK_USB)
+    case ZMK_TRANSPORT_USB: {
+        int err = zmk_usb_hid_send_report((uint8_t *)rp,sizeof(report_mouse_t));
+        if (err) {
+            LOG_ERR("FAILED TO SEND OVER USB: %d", err);
+        }
+        return err;
+    }
+#endif /* IS_ENABLED(CONFIG_ZMK_USB) */
+
+#if IS_ENABLED(CONFIG_ZMK_BLE)
+    case ZMK_TRANSPORT_BLE: {        
+        int err = zmk_hog_send_mouse_report(rp);
+        if (err) {
+            LOG_ERR("FAILED TO SEND OVER HOG: %d", err);
+        }
+        return err;
+    }
+#endif /* IS_ENABLED(CONFIG_ZMK_BLE) */
+#if CONFIG_ZMK_NRF_24G      
+    case ZMK_TRANSPORT_24G:
+        {
+
+            int err=zmk_24g_send_report((uint8_t*)rp,sizeof(report_mouse_t));
+            if (err) {
+                LOG_ERR("FAILED TO SEND OVER HOG: %d", err);
+            }
+            return err;
+        }
+        break;
+#endif    
+    default:
+        break;     
+    }
+
+    LOG_ERR("Unsupported endpoint transport %d", current_instance.transport);
+    return -ENOTSUP;
 }
 
 ZMK_LISTENER(endpoint_listener, endpoint_listener);
