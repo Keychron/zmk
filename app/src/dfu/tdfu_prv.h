@@ -1,6 +1,6 @@
 #ifndef __MY_DFU_PRIVATE_H__
 #define __MY_DFU_PRIVATE_H__
-#include "..\version.h"//<app_version.h>
+#include "../version.h"//<app_version.h>
 unsigned char *my_dfu_get_prv_data(void);
 unsigned char my_dfu_get_prv_len(void);
 
