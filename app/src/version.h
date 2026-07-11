@@ -4,11 +4,11 @@
 #if CONFIG_SHIELD_KEYCHRON_B1
 #define VERSION_MAJOR   1
 #define VERSION_MINOR   0
-#define PATCHLEVEL  	4
+#define PATCHLEVEL      4
 #elif CONFIG_SHIELD_KEYCHRON_B2
 #define VERSION_MAJOR   1
 #define VERSION_MINOR   0
-#define PATCHLEVEL  	2
+#define PATCHLEVEL      2
 #else  
 #define VERSION_MAJOR   1
 #define VERSION_MINOR   3
@@ -23,8 +23,8 @@
 #define USB_DEC_TO_BCD(dec)	((((dec) / 10) << 4) | ((dec) % 10))
 
 /** USB Device release number (bcdDevice Descriptor field) */
-#define USB_BCD_VER		(USB_DEC_TO_BCD(VERSION_MAJOR) << 8 | \
-				 USB_DEC_TO_BCD((VERSION_MINOR*10)+PATCHLEVEL))
+#define USB_BCD_VER	    (USB_DEC_TO_BCD(VERSION_MAJOR) << 8 | \
+                 USB_DEC_TO_BCD((VERSION_MINOR*10)+PATCHLEVEL))
 #define VER_STR1(a1,a2,a3,a4) "v"#a1"."#a2"."#a3"-"a4
 #define VER_STR(a1,a2,a3,a4) VER_STR1(a1,a2,a3,a4)
 
