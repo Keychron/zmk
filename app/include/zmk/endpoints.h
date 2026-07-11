@@ -27,8 +27,8 @@
 #endif
 
 enum {
-	REBOOT_ENDPOINT_BLE=0xc0,
-	REBOOT_ENDPOINT_24G
+    REBOOT_ENDPOINT_BLE=0xc0,
+    REBOOT_ENDPOINT_24G
 };
 /**
  * The total number of different (struct zmk_endpoint_instance) values that can

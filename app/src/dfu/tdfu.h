@@ -25,16 +25,16 @@
 #endif
 enum
 {
-	SUPPORT_LE			= 0x01,
-	SUPPORT_BR			= 0x01,
-	SUPPORT_EDR 		= 0x02,
-	SUPPORT_RF			= 0x04,
+    SUPPORT_LE            = 0x01,
+    SUPPORT_BR            = 0x01,
+    SUPPORT_EDR         = 0x02,
+    SUPPORT_RF            = 0x04,
 };
 
 enum
 {
-	TX__RSP_RX_CMD_SUCCESS 	= 0xA1,	
-	TX__OTA_REPORT			= 0xA3, 
+    TX__RSP_RX_CMD_SUCCESS     = 0xA1,    
+    TX__OTA_REPORT            = 0xA3, 
 };
 
 typedef struct 
@@ -51,50 +51,50 @@ typedef struct
 
 typedef enum
 {
-	DFU_ENC_NONE		= 0,
-	DFU_ENC_XXTEA,
-	DFU_ENC_AES128,
+    DFU_ENC_NONE        = 0,
+    DFU_ENC_XXTEA,
+    DFU_ENC_AES128,
 } DFU_ENC_MODE_T;
 
 #define DFU_ENC_SUPPORT DFU_ENC_XXTEA
 
 typedef struct{
-	unsigned char dfu_version_l;
-	unsigned char dfu_version_h;
-	unsigned char encrytion_m;
-	//unsigned char bootloader_type;
-	//unsigned char bootloader_vid[2];
-	//unsigned char bottloader_pid[2];
+    unsigned char dfu_version_l;
+    unsigned char dfu_version_h;
+    unsigned char encrytion_m;
+    //unsigned char bootloader_type;
+    //unsigned char bootloader_vid[2];
+    //unsigned char bottloader_pid[2];
 }tDFU_VERSION;
 
 typedef struct
 {
-	unsigned char hdr_l;
-	unsigned char hdr_h;
-	unsigned char len;
-	unsigned char len_n;
-	unsigned char sn;
-	unsigned char rsp_cmd;
-	unsigned char ack_sn;
-	unsigned char ack_cmd;
-	unsigned char ack_status;
+    unsigned char hdr_l;
+    unsigned char hdr_h;
+    unsigned char len;
+    unsigned char len_n;
+    unsigned char sn;
+    unsigned char rsp_cmd;
+    unsigned char ack_sn;
+    unsigned char ack_cmd;
+    unsigned char ack_status;
 }CMD_RSP_HDR;
 enum
 {
-	SC_FWU_HEADER = 0xaa55,
-	SC_FWU_HEADER_ACK = 0xaa56,
+    SC_FWU_HEADER = 0xaa55,
+    SC_FWU_HEADER_ACK = 0xaa56,
 };
 
 enum
 {
-	SCFWU_OPCODE_GET_MODEL_INFO = 0x60,
-	SCFWU_OPCODE_GET_DFU_VERSION = 0x61,
-	SCFWU_OPCODE_SET_SC_METHOED = 0x62,
-	SCFWU_OPCODE_START = 0x63,
-	SCFWU_OPCODE_SEND_BIN = 0x64,
-	SCFWU_OPCODE_VERIFY_CRC32 = 0x65,
-	SCFWU_OPCODE_IMAGE_SWITCH = 0x66,
-	APP_CMD_DFU_BUILD_INFO = 0x6f,
+    SCFWU_OPCODE_GET_MODEL_INFO = 0x60,
+    SCFWU_OPCODE_GET_DFU_VERSION = 0x61,
+    SCFWU_OPCODE_SET_SC_METHOED = 0x62,
+    SCFWU_OPCODE_START = 0x63,
+    SCFWU_OPCODE_SEND_BIN = 0x64,
+    SCFWU_OPCODE_VERIFY_CRC32 = 0x65,
+    SCFWU_OPCODE_IMAGE_SWITCH = 0x66,
+    APP_CMD_DFU_BUILD_INFO = 0x6f,
 };
 
 void my_scdfu_init(void);
