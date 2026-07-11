@@ -23,7 +23,7 @@
 #define USB_DEC_TO_BCD(dec)	((((dec) / 10) << 4) | ((dec) % 10))
 
 /** USB Device release number (bcdDevice Descriptor field) */
-#define USB_BCD_VER	    (USB_DEC_TO_BCD(VERSION_MAJOR) << 8 | \
+#define USB_BCD_VER		(USB_DEC_TO_BCD(VERSION_MAJOR) << 8 | \
                  USB_DEC_TO_BCD((VERSION_MINOR*10)+PATCHLEVEL))
 #define VER_STR1(a1,a2,a3,a4) "v"#a1"."#a2"."#a3"-"a4
 #define VER_STR(a1,a2,a3,a4) VER_STR1(a1,a2,a3,a4)
