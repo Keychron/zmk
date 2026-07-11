@@ -14,15 +14,15 @@ index c0b661007..c2014c3ba 100644
 --- a/drivers/usb/device/usb_dc_nrfx.c
 +++ b/drivers/usb/device/usb_dc_nrfx.c
 @@ -1075,7 +1075,9 @@ static void usbd_event_handler(nrfx_usbd_evt_t const *const p_event)
- 	case NRFX_USBD_EVT_SOF:
- 		if (IS_ENABLED(CONFIG_USB_DEVICE_SOF)) {
- 			evt.evt_type = USBD_EVT_SOF;
--			put_evt = true;
-+			// put_evt = true;
-+			extern uint32_t usb_sof_count;
-+			usb_sof_count ++;
- 		}
- 		break;
+     case NRFX_USBD_EVT_SOF:
+         if (IS_ENABLED(CONFIG_USB_DEVICE_SOF)) {
+             evt.evt_type = USBD_EVT_SOF;
+-            put_evt = true;
++            // put_evt = true;
++            extern uint32_t usb_sof_count;
++            usb_sof_count ++;
+         }
+         break;
  
 diff --git a/subsys/bluetooth/controller/ll_sw/nordic/lll/lll.c b/subsys/bluetooth/controller/ll_sw/nordic/lll/lll.c
 index e3ce60282..5bfe7d38d 100644
@@ -38,77 +38,77 @@ index e3ce60282..5bfe7d38d 100644
  ISR_DIRECT_DECLARE(radio_nrf5_isr)
 +#endif /* !CONFIG_DYNAMIC_DIRECT_INTERRUPTS */
  {
- 	DEBUG_RADIO_ISR(1);
+     DEBUG_RADIO_ISR(1);
  
 @@ -97,7 +101,9 @@ ISR_DIRECT_DECLARE(radio_nrf5_isr)
- 	lll_prof_exit_radio();
+     lll_prof_exit_radio();
  
- 	DEBUG_RADIO_ISR(0);
+     DEBUG_RADIO_ISR(0);
 +#if !defined(CONFIG_DYNAMIC_DIRECT_INTERRUPTS)
- 	return 1;
+     return 1;
 +#endif /* !CONFIG_DYNAMIC_DIRECT_INTERRUPTS */
  }
  
  static void rtc0_nrf5_isr(const void *arg)
 @@ -183,7 +189,27 @@ int lll_init(void)
  
- 	/* Initialize SW IRQ structure */
- 	hal_swi_init();
+     /* Initialize SW IRQ structure */
+     hal_swi_init();
 +#if defined(CONFIG_DYNAMIC_INTERRUPTS)
 +#if defined(CONFIG_DYNAMIC_DIRECT_INTERRUPTS)
-+	ARM_IRQ_DIRECT_DYNAMIC_CONNECT(RADIO_IRQn, CONFIG_BT_CTLR_LLL_PRIO,
-+				       IRQ_CONNECT_FLAGS, no_reschedule);
-+	irq_connect_dynamic(RADIO_IRQn, CONFIG_BT_CTLR_LLL_PRIO,
-+			    radio_nrf5_isr, NULL, IRQ_CONNECT_FLAGS);
++    ARM_IRQ_DIRECT_DYNAMIC_CONNECT(RADIO_IRQn, CONFIG_BT_CTLR_LLL_PRIO,
++                       IRQ_CONNECT_FLAGS, no_reschedule);
++    irq_connect_dynamic(RADIO_IRQn, CONFIG_BT_CTLR_LLL_PRIO,
++                radio_nrf5_isr, NULL, IRQ_CONNECT_FLAGS);
 +#else /* !CONFIG_DYNAMIC_DIRECT_INTERRUPTS */
-+	IRQ_DIRECT_CONNECT(RADIO_IRQn, CONFIG_BT_CTLR_LLL_PRIO,
-+			   radio_nrf5_isr, IRQ_CONNECT_FLAGS);
++    IRQ_DIRECT_CONNECT(RADIO_IRQn, CONFIG_BT_CTLR_LLL_PRIO,
++               radio_nrf5_isr, IRQ_CONNECT_FLAGS);
 +#endif /* !CONFIG_DYNAMIC_DIRECT_INTERRUPTS */
-+	irq_connect_dynamic(RTC0_IRQn, CONFIG_BT_CTLR_ULL_HIGH_PRIO,
-+			    rtc0_nrf5_isr, NULL, 0U);
-+	irq_connect_dynamic(HAL_SWI_RADIO_IRQ, CONFIG_BT_CTLR_LLL_PRIO,
-+			    swi_lll_nrf5_isr, NULL, IRQ_CONNECT_FLAGS);
++    irq_connect_dynamic(RTC0_IRQn, CONFIG_BT_CTLR_ULL_HIGH_PRIO,
++                rtc0_nrf5_isr, NULL, 0U);
++    irq_connect_dynamic(HAL_SWI_RADIO_IRQ, CONFIG_BT_CTLR_LLL_PRIO,
++                swi_lll_nrf5_isr, NULL, IRQ_CONNECT_FLAGS);
 +#if defined(CONFIG_BT_CTLR_LOW_LAT) || \
-+	(CONFIG_BT_CTLR_ULL_HIGH_PRIO != CONFIG_BT_CTLR_ULL_LOW_PRIO)
-+	irq_connect_dynamic(HAL_SWI_JOB_IRQ, CONFIG_BT_CTLR_ULL_LOW_PRIO,
-+			    swi_ull_low_nrf5_isr, NULL, 0U);
++    (CONFIG_BT_CTLR_ULL_HIGH_PRIO != CONFIG_BT_CTLR_ULL_LOW_PRIO)
++    irq_connect_dynamic(HAL_SWI_JOB_IRQ, CONFIG_BT_CTLR_ULL_LOW_PRIO,
++                swi_ull_low_nrf5_isr, NULL, 0U);
 +#endif
  
 +#else /* !CONFIG_DYNAMIC_INTERRUPTS */
- 	/* Connect ISRs */
- 	IRQ_DIRECT_CONNECT(RADIO_IRQn, CONFIG_BT_CTLR_LLL_PRIO,
- 			   radio_nrf5_isr, IRQ_CONNECT_FLAGS);
+     /* Connect ISRs */
+     IRQ_DIRECT_CONNECT(RADIO_IRQn, CONFIG_BT_CTLR_LLL_PRIO,
+                radio_nrf5_isr, IRQ_CONNECT_FLAGS);
 @@ -196,7 +222,8 @@ int lll_init(void)
- 	IRQ_CONNECT(HAL_SWI_JOB_IRQ, CONFIG_BT_CTLR_ULL_LOW_PRIO,
- 		    swi_ull_low_nrf5_isr, NULL, 0);
+     IRQ_CONNECT(HAL_SWI_JOB_IRQ, CONFIG_BT_CTLR_ULL_LOW_PRIO,
+             swi_ull_low_nrf5_isr, NULL, 0);
  #endif
 -
 +#endif /* !CONFIG_DYNAMIC_INTERRUPTS */
-+	
- 	/* Enable IRQs */
- 	irq_enable(RADIO_IRQn);
- 	irq_enable(RTC0_IRQn);
++    
+     /* Enable IRQs */
+     irq_enable(RADIO_IRQn);
+     irq_enable(RTC0_IRQn);
 diff --git a/subsys/bluetooth/services/bas.c b/subsys/bluetooth/services/bas.c
 index cf6482d53..ead09c15a 100644
 --- a/subsys/bluetooth/services/bas.c
 +++ b/subsys/bluetooth/services/bas.c
 @@ -95,5 +95,19 @@ int bt_bas_set_battery_level(uint8_t level)
  
- 	return rc == -ENOTCONN ? 0 : rc;
+     return rc == -ENOTCONN ? 0 : rc;
  }
 +//add by cwl @2023/11/23
 +int bt_bas_set_battery_level_fix(struct bt_conn *conn,uint8_t level)
 +{
-+	int rc;
-+	battery_level = level;
-+	if (level > 100U  || conn ==NULL) {
-+		if(level > 100U) battery_level =100;
-+		return -EINVAL;
-+	}
++    int rc;
++    battery_level = level;
++    if (level > 100U  || conn ==NULL) {
++        if(level > 100U) battery_level =100;
++        return -EINVAL;
++    }
 +
-+	rc = bt_gatt_notify(conn, &bas.attrs[1], &level, sizeof(level));
++    rc = bt_gatt_notify(conn, &bas.attrs[1], &level, sizeof(level));
 +
-+	return rc == -ENOTCONN ? 0 : rc;
++    return rc == -ENOTCONN ? 0 : rc;
 +}
  
  SYS_INIT(bas_init, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);

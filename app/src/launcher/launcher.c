@@ -62,10 +62,10 @@ static void in_ready_cb(const struct device *dev) { k_sem_give(&hid_via_sem); }
 
 static void out_ready_cb(const struct device *dev)
 {
-	uint8_t rev_buf[32]={0};
-	uint32_t rev_bytes =0;
-	hid_int_ep_read(dev,rev_buf,sizeof(rev_buf),&rev_bytes);
-	LOG_HEXDUMP_DBG(rev_buf,8,"rx");
+    uint8_t rev_buf[32]={0};
+    uint32_t rev_bytes =0;
+    hid_int_ep_read(dev,rev_buf,sizeof(rev_buf),&rev_bytes);
+    LOG_HEXDUMP_DBG(rev_buf,8,"rx");
     // raw_hid_receive(rev_buf,rev_bytes);
     uint16_t hdr = (rev_buf[0]<<8) | rev_buf[1];
     if(hdr == 0xaa55 || hdr== 0xaa56)

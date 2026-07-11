@@ -210,9 +210,9 @@ struct switch_to_adv switch_state;
 // static uint8_t switch_to_pair;
 /* Bonded address queue. */
 // K_MSGQ_DEFINE(bonds_queue,
-// 	      sizeof(bt_addr_le_t),
-// 	      CONFIG_BT_MAX_PAIRED,
-// 	      4);
+//           sizeof(bt_addr_le_t),
+//           CONFIG_BT_MAX_PAIRED,
+//           4);
 
 static void bond_cnt_cb(const struct bt_bond_info *info, void *user_data) {
     size_t *cnt = user_data;

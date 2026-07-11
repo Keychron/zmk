@@ -25,8 +25,8 @@ extern "C" {
 /** @brief Color of LED.
  */
 struct led_color {
-	/** Values for color channels. */
-	uint8_t c[_CAF_LED_COLOR_CHANNEL_COUNT];
+    /** Values for color channels. */
+    uint8_t c[_CAF_LED_COLOR_CHANNEL_COUNT];
 };
 
 /** @brief Single step of a LED effect.
@@ -36,27 +36,27 @@ struct led_color {
  * substeps to achieve smooth, gradual change.
  */
 struct led_effect_step {
-	/** LED color at the end of the step. */
-	struct led_color color;
+    /** LED color at the end of the step. */
+    struct led_color color;
 
-	/** Number of substeps. */
-	uint16_t substep_count;
+    /** Number of substeps. */
+    uint16_t substep_count;
 
-	/** Duration of a single substep. */
-	uint16_t substep_time;
+    /** Duration of a single substep. */
+    uint16_t substep_time;
 };
 
 /** @brief Single LED effect.
  */
 struct led_effect {
-	/** Sequence of LED color changes. It is defined by subsequent steps. */
-	const struct led_effect_step *steps;
+    /** Sequence of LED color changes. It is defined by subsequent steps. */
+    const struct led_effect_step *steps;
 
-	/** Number of steps for the given effect. */
-	uint16_t step_count;
+    /** Number of steps for the given effect. */
+    uint16_t step_count;
 
-	/** Flag that indicates if the sequence should start again after it finishes. */
-	bool loop_forever;
+    /** Flag that indicates if the sequence should start again after it finishes. */
+    bool loop_forever;
 };
 
 /** Transform color brightness from 8-bit space to percentage representation.
@@ -93,38 +93,38 @@ struct led_effect {
  *       Use @ref LED_COLOR_ARG_PASS macro for the preprocessor
  *       to treat it as a single argument again.
  */
-#define LED_COLOR(_r, _g, _b) {				\
-		.c = {					\
-			COLOR_BRIGHTNESS_TO_PCT(_r),	\
-			COLOR_BRIGHTNESS_TO_PCT(_g),	\
-			COLOR_BRIGHTNESS_TO_PCT(_b)	\
-		}					\
+#define LED_COLOR(_r, _g, _b) {                \
+        .c = {                    \
+            COLOR_BRIGHTNESS_TO_PCT(_r),    \
+            COLOR_BRIGHTNESS_TO_PCT(_g),    \
+            COLOR_BRIGHTNESS_TO_PCT(_b)    \
+        }                    \
 }
 
 /** Create LED color initializer for LED turned off.
  */
-#define LED_NOCOLOR() {			\
-		.c = {0, 0, 0}		\
+#define LED_NOCOLOR() {            \
+        .c = {0, 0, 0}        \
 }
 
 /** Create LED turned on effect initializer.
  *
  * LED color remains constant.
  *
- * @param _color	Selected LED color.
+ * @param _color    Selected LED color.
  */
-#define LED_EFFECT_LED_ON(_color)						\
-	{									\
-		.steps = ((const struct led_effect_step[]) {			\
-			{							\
-				.color = _color,				\
-				.substep_count = 1,				\
-				.substep_time = 0,				\
-			},							\
-		}),								\
-		.step_count = 1,						\
-		.loop_forever = false,						\
-	}
+#define LED_EFFECT_LED_ON(_color)                        \
+    {                                    \
+        .steps = ((const struct led_effect_step[]) {            \
+            {                            \
+                .color = _color,                \
+                .substep_count = 1,                \
+                .substep_time = 0,                \
+            },                            \
+        }),                                \
+        .step_count = 1,                        \
+        .loop_forever = false,                        \
+    }
 
 
 /** Create LED turned off effect initializer.
@@ -140,28 +140,28 @@ struct led_effect {
  * @param _off_delay  Time in which LED will gradually switch to off
  *                    (in milliseconds).
  */
-#define LED_EFFECT_LED_ON_GO_OFF(_color, _on_time, _off_delay)			\
-	{									\
-		.steps = ((const struct led_effect_step[]) {			\
-			{							\
-				.color = _color,				\
-				.substep_count = 1,				\
-				.substep_time = 0,				\
-			},							\
-			{							\
-				.color = _color,				\
-				.substep_count = 1,				\
-				.substep_time = (_on_time),			\
-			},							\
-			{							\
-				.color = LED_NOCOLOR(),				\
-				.substep_count = (_off_delay)/10,		\
-				.substep_time = 10,				\
-			},							\
-		}),								\
-		.step_count = 3,						\
-		.loop_forever = false,						\
-	}
+#define LED_EFFECT_LED_ON_GO_OFF(_color, _on_time, _off_delay)            \
+    {                                    \
+        .steps = ((const struct led_effect_step[]) {            \
+            {                            \
+                .color = _color,                \
+                .substep_count = 1,                \
+                .substep_time = 0,                \
+            },                            \
+            {                            \
+                .color = _color,                \
+                .substep_count = 1,                \
+                .substep_time = (_on_time),            \
+            },                            \
+            {                            \
+                .color = LED_NOCOLOR(),                \
+                .substep_count = (_off_delay)/10,        \
+                .substep_time = 10,                \
+            },                            \
+        }),                                \
+        .step_count = 3,                        \
+        .loop_forever = false,                        \
+    }
 
 /** Create LED blinking effect initializer with two periods as arguments.
  *
@@ -169,29 +169,29 @@ struct led_effect {
  * turned off.
  * This macro takes two periods: for on and off time.
  *
- * @param _period_on	Period of time for which LED is on.
- * @param _period_off	Period of time for which LED is off.
- * @param _color	Selected LED color.
+ * @param _period_on    Period of time for which LED is on.
+ * @param _period_off    Period of time for which LED is off.
+ * @param _color    Selected LED color.
  *
  * @sa LED_EFFECT_LED_BLINK
  */
-#define LED_EFFECT_LED_BLINK2(_period_on, _period_off, _color)			\
-	{									\
-		.steps = ((const struct led_effect_step[]) {			\
-			{							\
-				.color = _color,				\
-				.substep_count = 1,				\
-				.substep_time = (_period_off),			\
-			},							\
-			{							\
-				.color = LED_NOCOLOR(),				\
-				.substep_count = 1,				\
-				.substep_time = (_period_on),			\
-			},							\
-		}),								\
-		.step_count = 2,						\
-		.loop_forever = true,						\
-	}
+#define LED_EFFECT_LED_BLINK2(_period_on, _period_off, _color)            \
+    {                                    \
+        .steps = ((const struct led_effect_step[]) {            \
+            {                            \
+                .color = _color,                \
+                .substep_count = 1,                \
+                .substep_time = (_period_off),            \
+            },                            \
+            {                            \
+                .color = LED_NOCOLOR(),                \
+                .substep_count = 1,                \
+                .substep_time = (_period_on),            \
+            },                            \
+        }),                                \
+        .step_count = 2,                        \
+        .loop_forever = true,                        \
+    }
 
 
 /** Create LED blinking effect initializer with one period given
@@ -200,13 +200,13 @@ struct led_effect {
  * turned off.
  * The same time is used for both: on and off time.
  *
- * @param _period	Period of time between LED color switches.
- * @param _color	Selected LED color.
+ * @param _period    Period of time between LED color switches.
+ * @param _color    Selected LED color.
  *
  * @sa LED_EFFECT_LED_BLINK
  */
 #define LED_EFFECT_LED_BLINK(_period, _color) \
-	LED_EFFECT_LED_BLINK2(_period, _period, LED_COLOR_ARG_PASS(_color))
+    LED_EFFECT_LED_BLINK2(_period, _period, LED_COLOR_ARG_PASS(_color))
 
 /** @def _BREATH_SUBSTEPS
  *
@@ -219,38 +219,38 @@ struct led_effect {
  * LED color is smoothly, gradually changed between the LED turned off
  * and the selected color.
  *
- * @param _period	Period of time for single substep.
- * @param _color	Selected LED color.
+ * @param _period    Period of time for single substep.
+ * @param _color    Selected LED color.
  */
-#define LED_EFFECT_LED_BREATH(_period, _color)						\
-	{										\
-		.steps = ((const struct led_effect_step[]) {				\
-			{								\
-				.color = _color,					\
-				.substep_count = _BREATH_SUBSTEPS,			\
-				.substep_time = ((_period + (_BREATH_SUBSTEPS - 1))	\
-						/ _BREATH_SUBSTEPS),			\
-			},								\
-			{								\
-				.color = _color,					\
-				.substep_count = 1,					\
-				.substep_time = _period,				\
-			},								\
-			{								\
-				.color = LED_NOCOLOR(),					\
-				.substep_count = _BREATH_SUBSTEPS,			\
-				.substep_time = ((_period + (_BREATH_SUBSTEPS - 1))	\
-						/ _BREATH_SUBSTEPS),			\
-			},								\
-			{								\
-				.color = LED_NOCOLOR(),					\
-				.substep_count = 1,					\
-				.substep_time = _period,				\
-			},								\
-		}),									\
-		.step_count = 4,							\
-		.loop_forever = true,							\
-	}
+#define LED_EFFECT_LED_BREATH(_period, _color)                        \
+    {                                        \
+        .steps = ((const struct led_effect_step[]) {                \
+            {                                \
+                .color = _color,                    \
+                .substep_count = _BREATH_SUBSTEPS,            \
+                .substep_time = ((_period + (_BREATH_SUBSTEPS - 1))    \
+                        / _BREATH_SUBSTEPS),            \
+            },                                \
+            {                                \
+                .color = _color,                    \
+                .substep_count = 1,                    \
+                .substep_time = _period,                \
+            },                                \
+            {                                \
+                .color = LED_NOCOLOR(),                    \
+                .substep_count = _BREATH_SUBSTEPS,            \
+                .substep_time = ((_period + (_BREATH_SUBSTEPS - 1))    \
+                        / _BREATH_SUBSTEPS),            \
+            },                                \
+            {                                \
+                .color = LED_NOCOLOR(),                    \
+                .substep_count = 1,                    \
+                .substep_time = _period,                \
+            },                                \
+        }),                                    \
+        .step_count = 4,                            \
+        .loop_forever = true,                            \
+    }
 
 /** @def LED_CLOCK_BLINK_PERIOD
  *
@@ -270,20 +270,20 @@ struct led_effect {
  * A single clock tick is a single LED blink with the defined color.
  * This macro is used by UTIL_LISTIFY macro.
  *
- * @param i	Tick number (required by UTIL_LISTIFY).
- * @param ...	Selected LED color.
+ * @param i    Tick number (required by UTIL_LISTIFY).
+ * @param ...    Selected LED color.
  */
-#define _LED_CLOCK_TIK(i, ...)						\
-		{							\
-			.color = __VA_ARGS__,				\
-			.substep_count = 1,				\
-			.substep_time = LED_CLOCK_BLINK_PERIOD,		\
-		},							\
-		{							\
-			.color = LED_NOCOLOR(),				\
-			.substep_count = 1,				\
-			.substep_time = LED_CLOCK_BLINK_PERIOD,		\
-		}
+#define _LED_CLOCK_TIK(i, ...)                        \
+        {                            \
+            .color = __VA_ARGS__,                \
+            .substep_count = 1,                \
+            .substep_time = LED_CLOCK_BLINK_PERIOD,        \
+        },                            \
+        {                            \
+            .color = LED_NOCOLOR(),                \
+            .substep_count = 1,                \
+            .substep_time = LED_CLOCK_BLINK_PERIOD,        \
+        }
 
 /** Create LED clock effect initializer.
  *
@@ -293,85 +293,85 @@ struct led_effect {
  * @note You can pass only one additional argument to the UTIL_LISTIFY macro,
  * which in this case is LED color. Period is defined separately.
  *
- * @param _ticks	Number of ticks.
- * @param _color	Selected LED color.
+ * @param _ticks    Number of ticks.
+ * @param _color    Selected LED color.
  */
-#define LED_EFFECT_LED_CLOCK(_ticks, _color)					\
-	{									\
-		.steps = ((const struct led_effect_step[]) {			\
-			{							\
-				.color = LED_NOCOLOR(),				\
-				.substep_count = 1,				\
-				.substep_time = LED_CLOCK_SLEEP_PERIOD,		\
-			},							\
-			LISTIFY(_ticks, _LED_CLOCK_TIK, (,), _color)		\
-		}),								\
-		.step_count = (2 * _ticks + 1),					\
-		.loop_forever = true,						\
-	}
+#define LED_EFFECT_LED_CLOCK(_ticks, _color)                    \
+    {                                    \
+        .steps = ((const struct led_effect_step[]) {            \
+            {                            \
+                .color = LED_NOCOLOR(),                \
+                .substep_count = 1,                \
+                .substep_time = LED_CLOCK_SLEEP_PERIOD,        \
+            },                            \
+            LISTIFY(_ticks, _LED_CLOCK_TIK, (,), _color)        \
+        }),                                \
+        .step_count = (2 * _ticks + 1),                    \
+        .loop_forever = true,                        \
+    }
 #define LED_EFFECT_LED_FLASH(_ticks,_period,_color) \
-	{									\
-		.steps = ((const struct led_effect_step[]) {			\
-			{							\
-				.color = LED_NOCOLOR(),				\
-				.substep_count = 1,				\
-				.substep_time = _period,		\
-			},							\
-			LISTIFY(_ticks, _LED_CLOCK_TIK, (,), _color)		\
-		}),								\
-		.step_count = (2 * _ticks + 1),					\
-		.loop_forever = false,						\
-	}
+    {                                    \
+        .steps = ((const struct led_effect_step[]) {            \
+            {                            \
+                .color = LED_NOCOLOR(),                \
+                .substep_count = 1,                \
+                .substep_time = _period,        \
+            },                            \
+            LISTIFY(_ticks, _LED_CLOCK_TIK, (,), _color)        \
+        }),                                \
+        .step_count = (2 * _ticks + 1),                    \
+        .loop_forever = false,                        \
+    }
 
-#define _LED_FLASH_TIK(i, ...)						\
-		{							\
-			.color = __VA_ARGS__,				\
-			.substep_count = 1,				\
-			.substep_time = 400,		\
-		},							\
-		{							\
-			.color = LED_NOCOLOR(),				\
-			.substep_count = 1,				\
-			.substep_time = 400,		\
-		}	
+#define _LED_FLASH_TIK(i, ...)                        \
+        {                            \
+            .color = __VA_ARGS__,                \
+            .substep_count = 1,                \
+            .substep_time = 400,        \
+        },                            \
+        {                            \
+            .color = LED_NOCOLOR(),                \
+            .substep_count = 1,                \
+            .substep_time = 400,        \
+        }    
 #define LED_EFFECT_LED_FLASH2(_ticks,_color) \
-	{									\
-		.steps = ((const struct led_effect_step[]) {			\
-			{							\
-				.color = LED_NOCOLOR(),				\
-				.substep_count = 1,				\
-				.substep_time = 200,		\
-			},							\
-			LISTIFY(_ticks, _LED_FLASH_TIK, (,), _color)		\
-		}),								\
-		.step_count = (2 * _ticks + 1),					\
-		.loop_forever = false,						\
-	}
+    {                                    \
+        .steps = ((const struct led_effect_step[]) {            \
+            {                            \
+                .color = LED_NOCOLOR(),                \
+                .substep_count = 1,                \
+                .substep_time = 200,        \
+            },                            \
+            LISTIFY(_ticks, _LED_FLASH_TIK, (,), _color)        \
+        }),                                \
+        .step_count = (2 * _ticks + 1),                    \
+        .loop_forever = false,                        \
+    }
 
-#define _LED_FLASH_TIK1(i, ...)						\
-		{							\
-			.color = __VA_ARGS__,				\
-			.substep_count = 1,				\
-			.substep_time = 500,		\
-		},							\
-		{							\
-			.color = LED_NOCOLOR(),				\
-			.substep_count = 1,				\
-			.substep_time = 500,		\
-		}
+#define _LED_FLASH_TIK1(i, ...)                        \
+        {                            \
+            .color = __VA_ARGS__,                \
+            .substep_count = 1,                \
+            .substep_time = 500,        \
+        },                            \
+        {                            \
+            .color = LED_NOCOLOR(),                \
+            .substep_count = 1,                \
+            .substep_time = 500,        \
+        }
 #define LED_EFFECT_LED_FLASH3(_ticks,_color) \
-	{									\
-		.steps = ((const struct led_effect_step[]) {			\
-			{							\
-				.color = LED_NOCOLOR(),				\
-				.substep_count = 1,				\
-				.substep_time = 200,		\
-			},							\
-			LISTIFY(_ticks, _LED_FLASH_TIK1, (,),_color)		\
-		}),								\
-		.step_count = (2 * _ticks + 1),					\
-		.loop_forever = false,						\
-	}
+    {                                    \
+        .steps = ((const struct led_effect_step[]) {            \
+            {                            \
+                .color = LED_NOCOLOR(),                \
+                .substep_count = 1,                \
+                .substep_time = 200,        \
+            },                            \
+            LISTIFY(_ticks, _LED_FLASH_TIK1, (,),_color)        \
+        }),                                \
+        .step_count = (2 * _ticks + 1),                    \
+        .loop_forever = false,                        \
+    }
 #ifdef __cplusplus
 }
 #endif
