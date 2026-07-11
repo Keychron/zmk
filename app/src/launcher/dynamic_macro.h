@@ -18,7 +18,8 @@
 #pragma once
 
 /* Warn users that this is now deprecated and they should use the core feature instead. */
-#pragma message "Dynamic Macros is now a core feature. See updated documentation to see how to configure it: https://docs.qmk.fm/#/feature_dynamic_macros"
+#pragma message
+    "Dynamic Macros is now a core feature. See updated documentation to see how to configure it: https://docs.qmk.fm/#/feature_dynamic_macros"
 
 #include "action_layer.h"
 
@@ -32,7 +33,7 @@
  * there have been reports of it being too much in some users' cases,
  * so 128 is considered a safe default.
  */
-#    define DYNAMIC_MACRO_SIZE 128
+#define DYNAMIC_MACRO_SIZE 128
 #endif
 
 /* Blink the LEDs to notify the user about some event. */
@@ -57,7 +58,8 @@ void dynamic_macro_led_blink(void) {
  * @param[out] macro_pointer The new macro buffer iterator.
  * @param[in]  macro_buffer  The macro buffer used to initialize macro_pointer.
  */
-void dynamic_macro_record_start(keyrecord_t **macro_pointer, keyrecord_t *macro_buffer) {
+void dynamic_macro_record_start(keyrecord_t **macro_pointer, 
+                                keyrecord_t *macro_buffer) {
     dprintln("dynamic macro recording: started");
 
     dynamic_macro_led_blink();
@@ -118,14 +120,17 @@ void dynamic_macro_record_key(keyrecord_t *macro_buffer, keyrecord_t **macro_poi
         dynamic_macro_led_blink();
     }
 
-    dprintf("dynamic macro: slot %d length: %d/%d\n", DYNAMIC_MACRO_CURRENT_SLOT(), DYNAMIC_MACRO_CURRENT_LENGTH(macro_buffer, *macro_pointer), DYNAMIC_MACRO_CURRENT_CAPACITY(macro_buffer, macro2_end));
+    dprintf("dynamic macro: slot %d length: %d/%d\n", DYNAMIC_MACRO_CURRENT_SLOT(),
+            DYNAMIC_MACRO_CURRENT_LENGTH(macro_buffer, *macro_pointer),
+            DYNAMIC_MACRO_CURRENT_CAPACITY(macro_buffer, macro2_end));
 }
 
 /**
  * End recording of the dynamic macro. Essentially just update the
  * pointer to the end of the macro.
  */
-void dynamic_macro_record_end(keyrecord_t *macro_buffer, keyrecord_t *macro_pointer, int8_t direction, keyrecord_t **macro_end) {
+void dynamic_macro_record_end(keyrecord_t *macro_buffer, keyrecord_t *macro_pointer,
+                              int8_t direction, keyrecord_t **macro_end) {
     dynamic_macro_led_blink();
 
     /* Do not save the keys being held when stopping the recording,
@@ -136,7 +141,8 @@ void dynamic_macro_record_end(keyrecord_t *macro_buffer, keyrecord_t *macro_poin
         macro_pointer -= direction;
     }
 
-    dprintf("dynamic macro: slot %d saved, length: %d\n", DYNAMIC_MACRO_CURRENT_SLOT(), DYNAMIC_MACRO_CURRENT_LENGTH(macro_buffer, macro_pointer));
+    dprintf("dynamic macro: slot %d saved, length: %d\n", DYNAMIC_MACRO_CURRENT_SLOT(),
+            DYNAMIC_MACRO_CURRENT_LENGTH(macro_buffer, macro_pointer));
 
     *macro_end = macro_pointer;
 }
@@ -234,7 +240,6 @@ bool process_record_dynamic_macro(uint16_t keycode, keyrecord_t *record) {
                             dynamic_macro_record_end(r_macro_buffer, macro_pointer, -1, &r_macro_end);
                             break;
                     }
-                    macro_id = 0;
                 }
                 return false;
             case QK_DYNAMIC_MACRO_PLAY_1:
