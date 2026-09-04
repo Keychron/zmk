@@ -56,17 +56,18 @@
     combos1 {
         compatible = "zmk,combos";
         combo_jz {
-            timeout-ms = <1000>;
+            timeout-ms = <250>;
             layers = <1 3>;
             key-positions = <61 71>; //fn+j+z
             bindings = <&long_press_recover 0 0>;
         };
         combo_xl {
-            timeout-ms = <1000>;
+            timeout-ms = <300>;
             layers =< 1 3>;
             key-positions = <72 63>; //fn+x+l
             bindings = <&long_press_change 0 0>;
         };
+/*
         combo_b {
             timeout-ms = <1000>;
             layers =< 1 3>;
@@ -76,13 +77,13 @@
         };
 
         combo_win_l {
-            timeout-ms = <1000>;
+            timeout-ms = <450>;
             layers =< 1 3>;
             //slow-release = <true>;
             key-positions = <86>; //fn+win
             bindings = <&long_press_fn_win 0 0>;
         };
-
+*/
         combo_t0 {
             timeout-ms = <10 >;
             layers =<4>;
@@ -208,11 +209,11 @@
         //mac
         layer_one  {
         bindings = < 
-        &trans      &kp F1                  &kp F2                  &kp F3                              &kp F4                  &kp F5              &kp F6          &kp F7          &kp F8              &kp F9      &kp F10     &kp F11             &kp F12             &trans           &trans         &trans          &trans              &trans
+        &trans      &kp F1                  &kp F2                  &kp F3                              &kp F4                  &kp F5              &kp F6          &kp F7          &kp F8              &kp F9      &kp F10     &kp F11             &kp F12             &kp F13          &trans         &trans          &trans              &trans
         &trans      &bt_pair_0 0 0          &bt_pair_1 0 0          &bt_pair_2 0 0                      &bt_pair_3 0 0          &trans              &trans          &trans          &trans              &trans      &trans      &trans              &kp C_AC_SEARCH     &trans           &trans         &trans          &trans              &trans
         &trans      &trans                  &trans                  &trans                              &trans                  &trans              &trans          &trans          &kp INS             &trans      &trans      &trans              &trans              &uc LG(LS(N4))   &trans         &trans          &trans              &trans
         &trans      &trans                  &trans                  &trans                              &trans                  &trans              &trans          &trans          &trans              &trans      &trans      &trans                      &trans                       &trans         &trans          &trans               
-        &trans      &trans                  &trans                  &trans                              &trans                  &trans              &trans          &trans          &trans              &trans      &trans                                  &uc LC(LG(SPACE))            &trans         &trans          &trans               
+        &trans      &trans                  &trans                  &trans                              &trans                  &out OUT_BAT        &trans          &trans          &trans              &trans      &trans                                  &uc LC(LG(SPACE))            &trans         &trans          &trans               
         &trans      &trans                  &trans                         &trans                                                                                                   &kp RCTRL           &trans        &kp HOME   &kp PG_UP   &kp PG_DN    &kp END                        &trans                         &trans              &trans   
         //
         &none       &none                   &none                   &none                               &none
@@ -236,11 +237,11 @@
         bindings = < 
                     //f1                    //f2                    //f3                                //f4                        //f5            //f6              //f7            //f8              //f9        //f10           //f11                         //f12                     
         &trans  &kp C_BRIGHTNESS_DEC    &kp C_BRIGHTNESS_INC        &uc LG(TAB)                         &uc LG(E)               &kp C_AC_SEARCH     &uc LG(L)       &kp C_PREVIOUS  &kp C_PLAY_PAUSE    &kp C_NEXT  &kp C_MUTE  &kp C_VOLUME_DOWN           &kp C_VOLUME_UP      &uc LG(I)       &trans         &trans          &trans              &trans
-        &trans  &bt_pair_0 0 0          &bt_pair_1 0 0              &bt_pair_2 0 0                      &bt_pair_3 0 0          &trans              &trans          &trans          &trans              &trans      &trans      &trans                      &kp C_AL_CALC        &trans          &trans         &trans          &trans              &trans
-        &trans  &trans                  &trans                      &trans                              &trans                  &trans              &trans          &trans          &kp INS             &trans      &trans      &trans                      &trans               &uc LG(LS(S))   &trans         &trans          &trans              &trans   
+        &trans  &bt_pair_0 0 0          &bt_pair_1 0 0              &bt_pair_2 0 0                      &bt_pair_3 0 0          &trans              &trans          &trans          &trans              &trans      &trans      &trans                      &kp C_AL_CALC        &trans          &trans         &trans          &trans              &long_press_bootloader 0 0
+        &trans  &trans                  &trans                      &trans                              &trans                  &trans              &trans          &trans          &kp INS             &trans      &trans      &trans                      &trans               &kp PSCRN       &trans         &trans          &trans              &trans   
         &trans  &trans                  &trans                      &trans                              &trans                  &trans              &trans          &trans          &trans              &trans      &trans      &trans                              &trans                       &trans         &trans          &trans              
-        &trans  &trans                  &trans                      &trans                              &trans                  &trans              &trans          &trans          &trans              &trans      &trans                                          &uc LG(DOT)                  &trans         &trans          &trans              
-        &trans  &trans                  &trans                           &trans                                                                                                     &kp RCTRL           &trans      &kp HOME    &kp PG_UP    &kp PG_DN   &kp END                                 &trans                         &trans              &trans
+        &trans  &trans                  &trans                      &trans                              &trans                  &out OUT_BAT        &trans          &trans          &trans              &trans      &trans                                          &uc LG(DOT)                  &trans         &trans          &trans              
+        &trans  &long_press_fn_win 0 0  &trans                           &trans                                                                                                     &kp RCTRL           &trans      &kp HOME    &kp PG_UP    &kp PG_DN   &kp END                                 &trans                         &trans              &trans
         //
         &none   &none                   &none                       &none                               &none
             >;

@@ -6,6 +6,7 @@
 #include <zmk/matrix_transform.h>
 #include <dt-bindings/zmk/hid_usage_pages.h>
 #include <dt-bindings/zmk/keys.h>
+#include <dt-bindings/zmk/outputs.h>
 #include "dynamic_keymap.h"
 
 
@@ -463,11 +464,18 @@ void set_zmk_keymap(uint8_t layer,uint8_t row ,uint8_t column ,uint16_t keycode)
                 binding.behavior_dev="user_custom";//"&kp";
                 binding.param1 =LG(LS(N4));
                 break;
+            case UC_BATINFO:
+                binding.behavior_dev="OUTPUTS";//"&kp";
+                binding.param1 =OUT_BAT;
+                break;
             case UC_KEYCHRON:
                 binding.behavior_dev="ZM_MA";//"&kp";
                 binding.param1 =0x770100;
                 break;
             }
+            break;
+        case QK_MAGIC_TOGGLE_GUI:
+            binding.behavior_dev="lp_fn_win";
             break;
         default:
             binding.behavior_dev="NONE";//"&none";
@@ -688,7 +696,19 @@ void generate_via_keymaps(void)
                         }
 
                     }
+                    else if(memcmp(behavior_dev,"lp_fn_win",9)==0)
+                    {
+                        gen_via_keymaps[layer][row][column]=QK_MAGIC_TOGGLE_GUI;
+                    }
+                    else if(memcmp(behavior_dev,"OUTPUTS",7)==0){
 
+                        switch(binding->param1)
+                        {
+                            case OUT_BAT:
+                                gen_via_keymaps[layer][row][column] =UC_BATINFO;
+                                break;
+                        }
+                    }
                     else {
                         gen_via_keymaps[layer][row][column]=KC_NO;
                     }

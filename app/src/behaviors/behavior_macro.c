@@ -11,21 +11,28 @@
 #include <zmk/behavior_queue.h>
 #include <zmk/keymap.h>
 
-LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
-
+LOG_MODULE_DECLARE(zmk, 4);//CONFIG_ZMK_LOG_LEVEL);
+#if 0
+void send_char(char ascii_code);
+void send_string_end(void);
+char *strs[]={
+    "hello",
+    "https://keychron.kr/hello"
+};
+#endif
 
 #include "../launcher/keycodes.h"
 #include "../launcher/send_string.h"
 
 char  keychron_web_win[]=
 {
-    "\1\2\xe3r\1\3\xe3\1\004100|msedge.exe https://keychron.com\n"
-    // SS_LWIN(R)SS_DELAY(100)"msedge.exe https://keychron.com\r"
+    "\1\2\xe3r\1\3\xe3\1\004100|msedge.exe https://launcher.keychron.com\n"
+    // SS_LWIN(R)SS_DELAY(100)"msedge.exe https://launcher.keychron.com\r"
 };
 char  keychron_web_mac[]=
 {
-    "\1\2\xe3 \1\3\xe3\1\004100|safari\n\1\004100|\1\2\xe3t\1\3\xe3\1\004100|https://keychron.com\n"
-    //SS_LCMD( )SS_DELAY(100)"safari\r"SS_DELAY(100)SS_LCMD(T)SS_DELAY(100)"https://keychron.com\r"
+    "\1\2\xe3 \1\3\xe3\1\004100|safari\n\1\004100|\1\2\xe3t\1\3\xe3\1\004100|https://launcher.keychron.com\n"
+    //SS_LCMD( )SS_DELAY(100)"safari\r"SS_DELAY(100)SS_LCMD(T)SS_DELAY(100)"https://launcher.keychron.com\r"
 };
 
 enum behavior_macro_mode {
@@ -223,7 +230,26 @@ static int on_macro_binding_pressed(struct zmk_behavior_binding *binding,
             send_string_end();
         }
     }   
-    
+#if 0     
+    else if(memcmp(binding->behavior_dev,"ZM_MS1",6)==0) 
+    {
+        char * p = strs[1];
+        uint8_t len = strlen(p);
+        LOG_DBG("via macro s:%s ,len:%d",p,len);
+        for(int i=0;i<len;i++)
+            send_char(p[i]);
+        send_string_end();
+    }
+    else if(memcmp(binding->behavior_dev,"ZM_MS2",6)==0) 
+    {
+        char * p = strs[0];
+        uint8_t len = strlen(p);
+        LOG_DBG("via macro s:%s,len:%d",p,len);
+        for(int i=0;i<len;i++)
+            send_char(p[i]);
+        send_string_end();
+    }
+#endif     
     else
     {
         queue_macro(event.position, cfg->bindings, trigger_state, binding);

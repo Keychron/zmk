@@ -95,11 +95,24 @@ int zmk_usb_hid_send_report(const uint8_t *report, size_t len) {
         int err;
         if(zmk_usb_protocol == HID_PROTOCOL_REPORT)
         {
+#if CONFIG_ADAPATIVE_NKRO            
+            if(report[0]==ZMK_HID_REPORT_ID_KEYBOARD_NKRO)
+            {
+                uint8_t buffer[(ZMK_HID_KEYBOARD_NKRO_MAX_USAGE + 1) / 8+2];
+                buffer[0]=report[0];
+                buffer[1]=report[1];
+                memcpy(buffer+2,report+3,(ZMK_HID_KEYBOARD_NKRO_MAX_USAGE + 1) / 8);
+                // LOG_HEXDUMP_ERR(buffer,len-1,"nkro");
+                err =hid_int_ep_write(hid_dev, buffer, len-1, NULL);
+            }
+            else
+#endif     
              err = hid_int_ep_write(hid_dev, report, len, NULL);
         }
         else
         {
-             err = hid_int_ep_write(hid_dev, &report[1], len-1, NULL);
+        
+            err = hid_int_ep_write(hid_dev, &report[1], 8, NULL);
         }
 
         if (err) {

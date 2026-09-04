@@ -169,6 +169,13 @@ void dynamic_keymap_set_keycode_no_update(uint8_t layer, uint8_t row, uint8_t co
 void dynamic_keymap_set_keycode(uint8_t layer, uint8_t row, uint8_t column, uint16_t keycode) {
     if (layer >= DYNAMIC_KEYMAP_LAYER_COUNT || row >= MATRIX_ROWS || column >= MATRIX_COLS) return;
     uint16_t address = dynamic_keymap_key_to_eeprom_address(layer, row, column);
+#ifdef CONFIG_EN_FIX_CAPS_ALT_DEL  
+    extern bool caps_ctrl_swap;
+    if((layer==0 || layer==2) && (row==5 && column==17) && keycode ==KC_LEFT_CTRL)
+    {
+        caps_ctrl_swap = true;
+    }
+#endif    
     // Big endian, so we can read/write EEPROM directly from host if we want
     eeprom_update_byte(address, (uint8_t)(keycode >> 8));
     eeprom_update_byte(address + 1, (uint8_t)(keycode & 0xFF));
@@ -233,7 +240,7 @@ void dynamic_keymap_reset(bool save) {
 
     if(save)
     {
-        save_info.save_type = SAVE_VIA_KEYMAPS_RESET;
+        save_info.save_type |= SAVE_VIA_KEYMAPS_RESET;
         save_info.save_index =0xff;
         k_work_reschedule(&storage_via_work,K_MSEC(100));
     }
@@ -333,7 +340,7 @@ void dynamic_keymap_macro_reset(bool save) {
     }
     if(save)
     {
-        save_info.save_type = SAVE_VIA_MACROS_RESET;
+        save_info.save_type |= SAVE_VIA_MACROS_RESET;
         k_work_reschedule(&storage_via_work,K_MSEC(100));
     }
 }
@@ -391,8 +398,8 @@ uint32_t convert_time(uint8_t *ch)
 }
 void send_string_delay(uint32_t delay_time)
 {
-    uint8_t data[8]={SS_QMK_PREFIX,SS_DELAY_CODE};
-    if(delay_time>9999) delay_time =9999;
+    uint8_t data[10]={SS_QMK_PREFIX,SS_DELAY_CODE};
+    if(delay_time>99999) delay_time =99999;
     sprintf(&data[2],"%d",delay_time);
     send_string_with_delay(data, DYNAMIC_KEYMAP_MACRO_DELAY);
 }
@@ -401,9 +408,9 @@ void macro_exec(void)
 {
     static uint16_t total=0;
     uint8_t err=0;
-    uint32_t delay_time =0;
+    static uint32_t delay_time =0;//fix restart macro exec delay not correct!
     // Send the macro string by making a temporary string.
-    char data[8] = {0};
+    char data[10] = {0};
     // We already checked there was a null at the end of
     // the buffer, so this cannot go past the end
     uint8_t count=0;
@@ -457,7 +464,7 @@ void macro_exec(void)
                     }
                     // If haven't found '|' by i==6 then
                     // number too big, abort
-                    if (i == 6) {
+                    if (i == 7) {
                         err=1;
                         break;
                     }

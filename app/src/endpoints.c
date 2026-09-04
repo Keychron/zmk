@@ -32,14 +32,14 @@ extern uint8_t get_hardware_select_transport(void);
 extern int zmk_ble_init(const struct device *_arg);
 #if CONFIG_ZMK_NRF_24G
 extern void zmk_24g_init(void);
-extern int zmk_24g_send_report(uint8_t *data,uint8_t len) ;
-#endif 
+extern int zmk_24g_send_report(uint8_t *data, uint8_t len);
+#endif
 int zmk_hog_send_mouse_report(report_mouse_t *report);
 void keyboad_led_set_onoff(uint8_t led_state);
 void bt_24g_switch_reset(void);
 uint8_t get_mode_status(void);
 
-// #define DEFAULT_TRANSPORT                                                                          
+// #define DEFAULT_TRANSPORT
 //     COND_CODE_1(IS_ENABLED(CONFIG_ZMK_BLE), (ZMK_TRANSPORT_BLE), (ZMK_TRANSPORT_USB))
 
 #define DEFAULT_TRANSPORT ZMK_TRANSPORT_USB
@@ -50,10 +50,7 @@ static enum zmk_transport preferred_transport =
 
 static void update_current_endpoint(void);
 
-void switch_to_usb(void)
-{
-    zmk_endpoints_select_transport(ZMK_TRANSPORT_USB);
-}
+void switch_to_usb(void) { zmk_endpoints_select_transport(ZMK_TRANSPORT_USB); }
 #if 0
 #if IS_ENABLED(CONFIG_SETTINGS)
 static void endpoints_save_preferred_work(struct k_work *work) {
@@ -70,7 +67,7 @@ static int endpoints_save_preferred(void) {
     return 0;
 #endif
 }
-#endif 
+#endif
 
 bool zmk_endpoint_instance_eq(struct zmk_endpoint_instance a, struct zmk_endpoint_instance b) {
     if (a.transport != b.transport) {
@@ -86,7 +83,7 @@ bool zmk_endpoint_instance_eq(struct zmk_endpoint_instance a, struct zmk_endpoin
     case ZMK_TRANSPORT_24G:
         return true;
         break;
-    default :
+    default:
         return false;
     }
 
@@ -121,8 +118,8 @@ int zmk_endpoint_instance_to_index(struct zmk_endpoint_instance endpoint) {
         return INSTANCE_INDEX_OFFSET_BLE + endpoint.ble.profile_index;
     case ZMK_TRANSPORT_24G:
         break;
-    default :
-        break;  
+    default:
+        break;
     }
 
     LOG_ERR("Invalid transport %d", endpoint.transport);
@@ -139,12 +136,10 @@ int zmk_endpoints_select_transport(enum zmk_transport transport) {
     // preferred_transport = transport;
 
     // endpoints_save_preferred();
-    if(current_instance.transport == transport)
-    {
+    if (current_instance.transport == transport) {
         return 0;
     }
-    if(transport == ZMK_TRANSPORT_NONE)
-    {
+    if (transport == ZMK_TRANSPORT_NONE) {
         current_instance.transport = transport;
         return 0;
     }
@@ -160,10 +155,126 @@ int zmk_endpoints_toggle_transport(void) {
     return zmk_endpoints_select_transport(new_transport);
 }
 
-struct zmk_endpoint_instance zmk_endpoints_selected(void) {
-    return current_instance;
-}
+struct zmk_endpoint_instance zmk_endpoints_selected(void) { return current_instance; }
+#if CONFIG_ADAPATIVE_NKRO
 
+extern struct zmk_adapative_nkro adapative_nkro;
+int zmk_usb_hid_send_report(const uint8_t *report, size_t len);
+bool nkro_changed(void);
+bool kb_changed(void);
+
+int transport_send(struct zmk_hid_keyboard_report *report, uint8_t len)
+{
+    int err = 0;
+    switch (current_instance.transport) {
+        case ZMK_TRANSPORT_USB: {
+            err =zmk_usb_hid_send_report((uint8_t *)report,len);
+            if (err) {
+                LOG_ERR("FAILED TO SEND OVER USB: %d", err);
+            }
+        }
+        break;
+        case ZMK_TRANSPORT_24G:{
+            err = zmk_24g_send_report((uint8_t *)report, len);
+            if (err) {
+                LOG_ERR("FAILED TO SEND OVER PPT: %d", err);
+            }
+        }
+        break;
+
+        case ZMK_TRANSPORT_BLE: {
+            // LOG_HEXDUMP_ERR(&report->body,sizeof(report->body),"tx");
+            err = zmk_hog_send_keyboard_report(&report->body);
+            if (err) {
+                LOG_ERR("FAILED TO SEND OVER HOG: %d", err);
+            }
+        }
+        break;
+        default:
+        break;
+    }
+    return err;
+}
+static int send_keyboard_report(void) {
+    extern struct zmk_adapative_nkro adapative_nkro;
+    // extern struct zmk_hid_keyboard_report nkro_24g_rpt;
+    int ret=0;
+    if(zmk_endpoints_selected().transport != ZMK_TRANSPORT_24G)
+    {
+        if(kb_changed())
+        {
+            struct zmk_hid_keyboard_report *report = zmk_hid_get_keyboard_report();
+            report->report_id = ZMK_HID_REPORT_ID_KEYBOARD;
+            report->body._reserved =0;
+            uint8_t len =  CONFIG_ZMK_HID_KEYBOARD_REPORT_SIZE+3;
+            ret =transport_send(report,len);
+        }
+        if(nkro_changed())
+        {
+            adapative_nkro.nkro_report.report_id =ZMK_HID_REPORT_ID_KEYBOARD_NKRO;
+            adapative_nkro.nkro_report.body.modifiers=0;
+            adapative_nkro.nkro_report.body._reserved=1;
+            struct zmk_hid_keyboard_report *report =&adapative_nkro.nkro_report;
+            uint8_t len = sizeof(adapative_nkro.nkro_report);
+            ret =transport_send(report,len);
+        }
+    }
+    else 
+    {
+        uint8_t nk_count=0;
+        for(int n=0;n<sizeof(adapative_nkro.nkro_report.body.keys);n++)
+        {
+            if(adapative_nkro.nkro_report.body.keys[n])
+            {
+                nk_count=1;
+                break;
+            }
+        }
+
+        if (nkro_changed()|| nk_count)
+        {
+             struct zmk_hid_keyboard_report kb_rpt={0};
+             struct zmk_hid_keyboard_report *report = zmk_hid_get_keyboard_report();
+
+             for(int i=0;i<CONFIG_ZMK_HID_KEYBOARD_REPORT_SIZE;i++)
+                if(report->body.keys[i])
+                    WRITE_BIT(kb_rpt.body.keys[report->body.keys[i]/8], report->body.keys[i] % 8, 1);
+            // LOG_HEXDUMP_ERR(adapative_nkro.nkro_report.body.keys,sizeof(kb_rpt.body.keys),"nk0");
+
+            for(int n=0;n<sizeof(kb_rpt.body.keys);n++)
+            {
+
+                kb_rpt.body.keys[n] |= adapative_nkro.nkro_report.body.keys[n];
+            }
+            
+            // LOG_HEXDUMP_ERR(kb_rpt.body.keys,sizeof(kb_rpt.body.keys),"kb");
+
+            kb_rpt.report_id =ZMK_HID_REPORT_ID_KEYBOARD_NKRO;
+            kb_rpt.body.modifiers=report->body.modifiers;;
+            kb_rpt.body._reserved=0;
+            struct zmk_hid_keyboard_report *nk_report =&kb_rpt;
+            uint8_t len = sizeof(kb_rpt);
+            ret =transport_send(nk_report,len);
+        }
+        else 
+        {
+            struct zmk_hid_keyboard_report *report = zmk_hid_get_keyboard_report();
+            report->report_id = ZMK_HID_REPORT_ID_KEYBOARD;
+            report->body._reserved =0;
+            uint8_t len =  CONFIG_ZMK_HID_KEYBOARD_REPORT_SIZE+3;
+            ret =transport_send(report,len);
+
+        }
+        // struct zmk_hid_keyboard_report *report = zmk_hid_get_keyboard_report();
+        // nkro_24g_rpt.body.modifiers=report->body.modifiers;
+        // nkro_24g_rpt.report_id =ZMK_HID_REPORT_ID_KEYBOARD_NKRO;        
+        // nkro_24g_rpt.body._reserved=0;
+        // // LOG_HEXDUMP_ERR(&nkro_24g_rpt,sizeof(nkro_24g_rpt),"24g");
+        // ret =transport_send(&nkro_24g_rpt,sizeof(nkro_24g_rpt));
+    }
+    return ret;
+}
+#else
 static int send_keyboard_report(void) {
     struct zmk_hid_keyboard_report *keyboard_report = zmk_hid_get_keyboard_report();
 
@@ -187,26 +298,24 @@ static int send_keyboard_report(void) {
         return err;
     }
 #endif /* IS_ENABLED(CONFIG_ZMK_BLE) */
-#if CONFIG_ZMK_NRF_24G      
-    case ZMK_TRANSPORT_24G:
-        {
+#if CONFIG_ZMK_NRF_24G
+    case ZMK_TRANSPORT_24G: {
 
-            int err=zmk_24g_send_report((uint8_t *)keyboard_report, sizeof(*keyboard_report));
-            if (err) {
-                LOG_ERR("FAILED TO SEND OVER HOG: %d", err);
-            }
-            return err;
+        int err = zmk_24g_send_report((uint8_t *)keyboard_report, sizeof(*keyboard_report));
+        if (err) {
+            LOG_ERR("FAILED TO SEND OVER HOG: %d", err);
         }
-        break;
-#endif    
+        return err;
+    } break;
+#endif
     default:
-        break;     
+        break;
     }
 
     LOG_ERR("Unsupported endpoint transport %d", current_instance.transport);
     return -ENOTSUP;
 }
-
+#endif 
 static int send_consumer_report(void) {
     struct zmk_hid_consumer_report *consumer_report = zmk_hid_get_consumer_report();
 
@@ -230,18 +339,16 @@ static int send_consumer_report(void) {
         return err;
     }
 #endif /* IS_ENABLED(CONFIG_ZMK_BLE) */
-#if CONFIG_ZMK_NRF_24G      
-     case ZMK_TRANSPORT_24G:
-        {
-            int err=zmk_24g_send_report((uint8_t *)consumer_report, sizeof(*consumer_report));
-            if (err) {
-                LOG_ERR("FAILED TO SEND OVER HOG: %d", err);
-            }
-            return err;
+#if CONFIG_ZMK_NRF_24G
+    case ZMK_TRANSPORT_24G: {
+        int err = zmk_24g_send_report((uint8_t *)consumer_report, sizeof(*consumer_report));
+        if (err) {
+            LOG_ERR("FAILED TO SEND OVER HOG: %d", err);
         }
-        break;
-#endif        
-     default:
+        return err;
+    } break;
+#endif
+    default:
         break;
     }
 
@@ -259,8 +366,8 @@ int zmk_endpoints_send_report(uint16_t usage_page) {
     case HID_USAGE_CONSUMER:
         return send_consumer_report();
     case HID_USAGE_GEN_BUTTON:
-         mousekey_send();
-         return 0;
+        mousekey_send();
+        return 0;
     }
 
     LOG_ERR("Unsupported usage page %d", usage_page);
@@ -330,10 +437,7 @@ static enum zmk_transport get_selected_transport(void) {
     return current_instance.transport;// DEFAULT_TRANSPORT;
 }
 #endif
-uint8_t get_current_transport(void)
-{
-    return current_instance.transport;
-}
+uint8_t get_current_transport(void) { return current_instance.transport; }
 #if 0
 static struct zmk_endpoint_instance get_selected_instance(void) {
     struct zmk_endpoint_instance instance = {.transport = get_selected_transport()};
@@ -352,10 +456,10 @@ static struct zmk_endpoint_instance get_selected_instance(void) {
 
     return instance;
 }
-#endif 
+#endif
 
 static int zmk_endpoints_init(const struct device *_arg) {
-#if 0// IS_ENABLED(CONFIG_SETTINGS)
+#if 0 // IS_ENABLED(CONFIG_SETTINGS)
     settings_subsys_init();
 
     int err = settings_register(&endpoints_handler);
@@ -374,9 +478,9 @@ static int zmk_endpoints_init(const struct device *_arg) {
         LOG_DBG("reason_reset_pin");
         nrf_power_resetreas_clear(NRF_POWER, POWER_RESETREAS_RESETPIN_Msk);
     }
-    
-    current_instance.transport =ZMK_TRANSPORT_NONE;//ZMK_TRANSPORT_USB;
 
+    current_instance.transport = ZMK_TRANSPORT_NONE; // ZMK_TRANSPORT_USB;
+    LOG_ERR("zmk_endpoints_init");
     return 0;
 }
 
@@ -394,35 +498,39 @@ static void disconnect_current_endpoint() {
     zmk_ble_endpoint_disconnect();
 }
 void led_power_on(void);
+void add_kscan_boot_msgq(void);
+
 static void update_current_endpoint(void) {
-    LOG_DBG("curr:%d,new:%d",current_instance.transport,preferred_transport);
-    struct zmk_endpoint_instance new_instance ={.transport = preferred_transport};// get_selected_instance();
+    LOG_DBG("curr:%d,new:%d", current_instance.transport, preferred_transport);
+    struct zmk_endpoint_instance new_instance = {
+        .transport = preferred_transport}; // get_selected_instance();
 
     if (!zmk_endpoint_instance_eq(new_instance, current_instance)) {
         // Cancel all current keypresses so keys don't stay held on the old endpoint.
-        if(current_instance.transport !=ZMK_TRANSPORT_NONE)
+        if (current_instance.transport != ZMK_TRANSPORT_NONE)
             disconnect_current_endpoint();
         current_instance = new_instance;
-        led_power_on();
-        
-        switch(current_instance.transport)
-        {
-            case ZMK_TRANSPORT_BLE:
-                LOG_DBG("change to ble");
-                zmk_ble_init(NULL);
-                break;
-#if CONFIG_ZMK_NRF_24G                  
-            case ZMK_TRANSPORT_24G:
-                LOG_DBG("change to 24g");                
-                zmk_24g_init();
-                break;
-#endif                
-            case ZMK_TRANSPORT_USB:
-                LOG_ERR("usb_dc_reset");
-                usb_dc_reset();
-                break;
-            default:
-                break;
+        // led_power_on();
+
+        switch (current_instance.transport) {
+        case ZMK_TRANSPORT_BLE:
+            LOG_DBG("change to ble");
+            zmk_ble_init(NULL);
+            add_kscan_boot_msgq();
+            break;
+#if CONFIG_ZMK_NRF_24G
+        case ZMK_TRANSPORT_24G:
+            LOG_DBG("change to 24g");
+            add_kscan_boot_msgq();
+            zmk_24g_init();
+            break;
+#endif
+        case ZMK_TRANSPORT_USB:
+            LOG_ERR("usb_dc_reset");
+            usb_dc_reset();
+            break;
+        default:
+            break;
         }
 
         char endpoint_str[ZMK_ENDPOINT_STR_LEN];
@@ -437,45 +545,38 @@ static void update_current_endpoint(void) {
 static int endpoint_listener(const zmk_event_t *eh) {
 
     const struct zmk_usb_conn_state_changed *ev = as_zmk_usb_conn_state_changed(eh);
-    if(ev)
-    {
-        LOG_DBG("usb state:%d",ev->conn_state);
-        if(ev->conn_state == ZMK_USB_CONN_HID)
-        {
-            if(current_instance.transport ==ZMK_TRANSPORT_USB)
-            {
-                LOG_DBG("usb status:%d",zmk_usb_get_status());
+    if (ev) {
+        LOG_DBG("usb state:%d", ev->conn_state);
+        if (ev->conn_state == ZMK_USB_CONN_HID) {
+            if (current_instance.transport == ZMK_TRANSPORT_USB) {
+                LOG_DBG("usb status:%d", zmk_usb_get_status());
 
-                if(zmk_usb_get_status()==USB_DC_SUSPEND)
-                {
-                    
+                if (zmk_usb_get_status() == USB_DC_SUSPEND) {
+
                     keyboad_led_set_onoff(0);
+                } else if (zmk_usb_get_status() == USB_DC_CONFIGURED) {
+                    add_kscan_boot_msgq();
                 }
             }
-            if(get_hardware_select_transport()==0 && get_mode_status()==3)
-            {
+            if (get_hardware_select_transport() == 0 && get_mode_status() == 3) {
                 preferred_transport = ZMK_TRANSPORT_USB;
                 update_current_endpoint();
             }
-        }
-        else if(ev->conn_state == ZMK_USB_CONN_NONE)
-        {
-            preferred_transport =get_hardware_select_transport();
+        } else if (ev->conn_state == ZMK_USB_CONN_NONE) {
+            preferred_transport = get_hardware_select_transport();
             update_current_endpoint();
         }
-
     }
-    
+
     return 0;
 }
 
-
 int host_mouse_send(report_mouse_t *rp) {
-   
+
     switch (current_instance.transport) {
 #if IS_ENABLED(CONFIG_ZMK_USB)
     case ZMK_TRANSPORT_USB: {
-        int err = zmk_usb_hid_send_report((uint8_t *)rp,sizeof(report_mouse_t));
+        int err = zmk_usb_hid_send_report((uint8_t *)rp, sizeof(report_mouse_t));
         if (err) {
             LOG_ERR("FAILED TO SEND OVER USB: %d", err);
         }
@@ -484,7 +585,7 @@ int host_mouse_send(report_mouse_t *rp) {
 #endif /* IS_ENABLED(CONFIG_ZMK_USB) */
 
 #if IS_ENABLED(CONFIG_ZMK_BLE)
-    case ZMK_TRANSPORT_BLE: {        
+    case ZMK_TRANSPORT_BLE: {
         int err = zmk_hog_send_mouse_report(rp);
         if (err) {
             LOG_ERR("FAILED TO SEND OVER HOG: %d", err);
@@ -492,20 +593,18 @@ int host_mouse_send(report_mouse_t *rp) {
         return err;
     }
 #endif /* IS_ENABLED(CONFIG_ZMK_BLE) */
-#if CONFIG_ZMK_NRF_24G      
-    case ZMK_TRANSPORT_24G:
-        {
+#if CONFIG_ZMK_NRF_24G
+    case ZMK_TRANSPORT_24G: {
 
-            int err=zmk_24g_send_report((uint8_t*)rp,sizeof(report_mouse_t));
-            if (err) {
-                LOG_ERR("FAILED TO SEND OVER HOG: %d", err);
-            }
-            return err;
+        int err = zmk_24g_send_report((uint8_t *)rp, sizeof(report_mouse_t));
+        if (err) {
+            LOG_ERR("FAILED TO SEND OVER HOG: %d", err);
         }
-        break;
-#endif    
+        return err;
+    } break;
+#endif
     default:
-        break;     
+        break;
     }
 
     LOG_ERR("Unsupported endpoint transport %d", current_instance.transport);

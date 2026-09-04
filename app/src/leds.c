@@ -10,7 +10,7 @@
 #include "led_effect.h"
 #include <zmk/leds.h>
 #include <zmk/endpoints.h>
-
+#include <hal/nrf_power.h>
 
 // #include <caf/events/power_event.h>
 // #include <caf/events/led_event.h>
@@ -40,6 +40,8 @@ static const struct led_effect led_peer_state_effect[] =
 LOG_MODULE_DECLARE(zmk,4);
 
 // K_SEM_DEFINE(power_on_sem,0,1);
+uint8_t get_mode_status(void);
+void led_power_on(void);
 void power_on_finish_cb(struct k_work * work);
 K_WORK_DEFINE(power_on_finish,power_on_finish_cb);
 static uint8_t led_power_on_status;
@@ -190,7 +192,8 @@ static void timer_handler(struct k_timer *timer)
 				led->effect_step = 0;
 			} else {
 				LOG_INF("led:%p effect finish",led);
-				if((led == &leds[ARRAY_SIZE(leds)-1]) &&  (led->effect == &led_peer_state_effect[LED_PEER_STATE_POWER_ON]))
+				if((led == &leds[ARRAY_SIZE(leds)-1]) &&  (led->effect == &led_peer_state_effect[LED_PEER_STATE_POWER_ON]
+																										|| led->effect == &led_peer_state_effect[LED_PEER_STATE_RECOVER]))
 				{
 					LOG_INF("power_on_finish");
 					// k_sem_give(&power_on_sem);
@@ -238,6 +241,11 @@ static void led_update(struct led *led)
 	}
 }
 void print_led_info(const struct device *dev,uint32_t led);
+#define LED_BLUE		0
+#define LED_NUMLOCK 	1
+#define LED_CAPSLOCK	2
+#define LED_24G			3
+#define LED_BAT 		4
  int leds_init(const struct device *_arg)
 {
 	int err = 0;
@@ -261,9 +269,11 @@ void print_led_info(const struct device *dev,uint32_t led);
 			// led_set_state(i,LED_PEER_STATE_POWER_ON);
 			// led->effect = &led_peer_state_effect[LED_PEER_STATE_POWER_ON];
 
-			led_update(led);
+			// led_update(led);
+			
 		}
 	}
+	led_power_on();
 	// k_work_reschedule(&test_led_work, K_MSEC(1000));
 	return err;
 }
@@ -289,6 +299,7 @@ void print_led_info(const struct device *dev,uint32_t led);
 {
 	for (size_t i = 0; i < ARRAY_SIZE(leds); i++) {
 		// k_work_cancel_delayable(&leds[i].work);
+		if(i== LED_BAT) continue;
 		k_timer_stop(&leds[i].timer);
 
 		set_off(&leds[i]);
@@ -323,11 +334,7 @@ void led_set_state(uint8_t index,uint8_t led_state)
 		led_update(&leds[index]);
 	}
 }
-#define LED_BLUE			0
-#define LED_NUMLOCK 	1
-#define LED_CAPSLOCK	2
-#define LED_24G				3
-#define LED_BAT 			4
+
 
 // static  struct gpio_dt_spec led_num=GPIO_DT_SPEC_GET(DT_NODELABEL(led_numlock),numlock_led);
 // static  struct gpio_dt_spec led_caps=GPIO_DT_SPEC_GET(DT_NODELABEL(led_capslock),caps_led);
@@ -449,8 +456,10 @@ void led_charge_set_state(uint8_t led_state)
 	}
 	charge_led_state =led_state;
 }
-void led_recover(void)
+static uint8_t recover_reboot;
+void led_recover(uint8_t reboot)
 {
+	recover_reboot=reboot;
 	for (size_t i = 0; i < ARRAY_SIZE(leds);i++)
 	{
 	#if (CONFIG_SHIELD_KEYCHRON_B1)
@@ -462,26 +471,44 @@ void led_recover(void)
 }
 void power_on_finish_cb(struct k_work * work)
 {
+	LOG_ERR("power_on_finish_cb");
+	if(recover_reboot) return;
 	keyboad_led_set_onoff(keyboard_led_state);
 	led_charge_set_state(charge_led_state);
 }
 bool bat_is_shutdown(void);
 void led_power_on(void)
 {
+	uint8_t type = nrf_power_gpregret_get(NRF_POWER);
+	uint8_t type1 =nrf_power_gpregret2_get(NRF_POWER);
+	LOG_ERR("NRFPOWER:%x,%x",type,type1);
+	if( (type !=0))
+	{
+		if(((type1 &0x0f) !=0)&&((type1 &0xf0)==0))
+		{
+			nrf_power_gpregret2_set(NRF_POWER, 0);
+			led_charge_set_state(charge_led_state);
+			return;
+		}
+	}
 	if(bat_is_shutdown()) return;
 	// k_sem_reset(&power_on_sem);
+	LOG_ERR("led power on:%d",get_mode_status());
 	led_power_on_status =1;
+
 
 	for (size_t i = 0; i < ARRAY_SIZE(leds);i++)
 	{
 	#if (CONFIG_SHIELD_KEYCHRON_B1)
 			if(i== LED_NUMLOCK) continue;
 	#endif
-			if(get_current_transport()==ZMK_TRANSPORT_BLE)
+			// if(get_current_transport()==ZMK_TRANSPORT_BLE)
+			if(get_mode_status()==2)
 			{
 				if(i==LED_24G) continue;
 			}
-			else if(get_current_transport()==ZMK_TRANSPORT_24G)
+			// else if(get_current_transport()==ZMK_TRANSPORT_24G)
+			if(get_mode_status()==1)
 			{
 				if(i==LED_BLUE) continue;
 			}
@@ -498,6 +525,7 @@ void led_power_on(void)
 void reset_led_power_on(void)
 {
 	// k_sem_give(&power_on_sem);
+	LOG_ERR("reset_led_power_on");
 	led_power_on_status=0;
 	leds_stop();
 }
@@ -506,6 +534,7 @@ static const struct led_effect * bat_bak_effect ;
 extern uint8_t bt_bas_get_battery_level(void);
 void led_bat_display(void)
 {
+	if(bat_is_shutdown()) return;
 	bat_bak_effect = leds[LED_BAT].effect;
 	LOG_DBG(".");
 	// led_charge_set_state(LED_BAT_NONE);

@@ -7,7 +7,7 @@ void blue_led_set_state(uint8_t led_state);
 void keyboad_led_set_onoff(uint8_t led_state);
 void led_24G_set_state(uint8_t led_state);
 void led_charge_set_state(uint8_t led_state);
-void led_recover(void);
+void led_recover(uint8_t reboot);
 void led_bat_display(void);
 void led_bat_display_off(void);
 uint8_t get_charge_led_state(void);

@@ -17,12 +17,17 @@
 #include <zephyr/settings/settings.h>
 #include <zmk/endpoints.h>
 #include <zephyr/sys/reboot.h>
-#if (CONFIG_SHIELD_KEYCHRON_B6_JIS||CONFIG_SHIELD_KEYCHRON_B1_JIS ||CONFIG_SHIELD_KEYCHRON_B2_JIS)
-//for jis layout!
+#if (CONFIG_SHIELD_KEYCHRON_B6_JIS || CONFIG_SHIELD_KEYCHRON_B1_JIS ||  CONFIG_SHIELD_KEYCHRON_B1_JIS_N || \
+     CONFIG_SHIELD_KEYCHRON_B2_JIS || CONFIG_SHIELD_KEYCHRON_B6_JIS_N)
+// for jis layout!
 #include "sendstring_japanese.h"
 #endif 
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
+
+#ifdef CONFIG_EN_FIX_CAPS_ALT_DEL
+bool caps_ctrl_swap = false;
+#endif
 
 enum {
     VIA_PATH_USB,
@@ -31,18 +36,16 @@ enum {
 };
 static uint8_t via_path;
 
-void via_set_path(uint8_t path)
-{
-    via_path = path;
-}
-void user_set_debounce(uint32_t scan_period_ms,uint32_t debounce_press_ms,uint32_t debounce_release_ms);
+void via_set_path(uint8_t path) { via_path = path; }
+void user_set_debounce(uint32_t scan_period_ms, uint32_t debounce_press_ms,
+                       uint32_t debounce_release_ms);
 
 uint8_t zmk_keymap_highest_layer_active();
 
-int zmk_24g_send_via_report(uint8_t *payload,uint8_t payload_len);
+int zmk_24g_send_via_report(uint8_t *payload, uint8_t payload_len);
 static uint8_t report_os_sw_state;
 void factory_test_rx(uint8_t *data, uint8_t length);
-K_MSGQ_DEFINE(via_usb_msgq, 32,16, 4);
+K_MSGQ_DEFINE(via_usb_msgq, 32, 16, 4);
 void via_usb_worker(struct k_work *work);
 K_WORK_DEFINE(via_usb_work, via_usb_worker);
 
@@ -50,28 +53,25 @@ static const struct device *hid_via_dev;
 
 static K_SEM_DEFINE(hid_via_sem, 1, 1);
 
-void via_usb_worker(struct k_work *work)
-{
+void via_usb_worker(struct k_work *work) {
     uint8_t usb_data[32];
     while (k_msgq_get(&via_usb_msgq, usb_data, K_NO_WAIT) == 0) {
-        raw_hid_receive(usb_data,sizeof(usb_data));
+        raw_hid_receive(usb_data, sizeof(usb_data));
     }
 }
 
 static void in_ready_cb(const struct device *dev) { k_sem_give(&hid_via_sem); }
 
-static void out_ready_cb(const struct device *dev)
-{
-	uint8_t rev_buf[32]={0};
-	uint32_t rev_bytes =0;
-	hid_int_ep_read(dev,rev_buf,sizeof(rev_buf),&rev_bytes);
-	LOG_HEXDUMP_DBG(rev_buf,8,"rx");
-    // raw_hid_receive(rev_buf,rev_bytes);
-    uint16_t hdr = (rev_buf[0]<<8) | rev_buf[1];
-    if(hdr == 0xaa55 || hdr== 0xaa56)
-    {
-        void my_scdfu_data_handle(unsigned char *pdata,unsigned char rxlen);
-        return my_scdfu_data_handle(&rev_buf[0],rev_bytes);
+static void out_ready_cb(const struct device *dev) {
+    uint8_t rev_buf[32] = {0};
+    uint32_t rev_bytes = 0;
+    hid_int_ep_read(dev, rev_buf, sizeof(rev_buf), &rev_bytes);
+    LOG_HEXDUMP_DBG(rev_buf, 8, "rx");
+    // raw_hid_receive(rev_buf, rev_bytes);
+    uint16_t hdr = (rev_buf[0] << 8) | rev_buf[1];
+    if (hdr == 0xaa55 || hdr == 0xaa56) {
+        void my_scdfu_data_handle(unsigned char *pdata, unsigned char rxlen);
+        return my_scdfu_data_handle(&rev_buf[0], rev_bytes);
     }
     via_path = VIA_PATH_USB;
     int err = k_msgq_put(&via_usb_msgq, rev_buf, K_MSEC(100));
@@ -109,11 +109,11 @@ int zmk_usb_hid_via_send(const uint8_t *report, size_t len) {
          k_msleep(20);
     default:
         k_sem_take(&hid_via_sem, K_MSEC(10));
-        LOG_HEXDUMP_DBG(report,8,"usb");
+        LOG_HEXDUMP_DBG(report, 8, "usb");
         int err = hid_int_ep_write(hid_via_dev, report, len, NULL);
 
-        if (err!=0) {
-            LOG_ERR("write err:%d",err);
+        if (err != 0) {
+            LOG_ERR("write err:%d", err);
             // k_sem_give(&hid_via_sem);
         }
 
@@ -128,7 +128,8 @@ static int zmk_usb_hid_via_init(const struct device *_arg) {
         return -EINVAL;
     }
 
-    usb_hid_register_device(hid_via_dev, zmk_hid_via_report_desc, sizeof(zmk_hid_via_report_desc), &ops);
+    usb_hid_register_device(hid_via_dev, zmk_hid_via_report_desc, sizeof(zmk_hid_via_report_desc),
+                            &ops);
     usb_hid_init(hid_via_dev);
     via_init();
     return 0;
@@ -145,15 +146,12 @@ struct direct_immediate_value {
     void *dest;
     uint8_t fetched;
 };
-static int direct_loader_immediate_value(const char *name, size_t len,
-                     settings_read_cb read_cb, void *cb_arg,
-                     void *param)
-{
+static int direct_loader_immediate_value(const char *name, size_t len, settings_read_cb read_cb,
+                                         void *cb_arg, void *param) {
     const char *next;
     size_t name_len;
     int rc;
-    struct direct_immediate_value *one_value =
-                    (struct direct_immediate_value *)param;
+    struct direct_immediate_value *one_value = (struct direct_immediate_value *)param;
 
     name_len = settings_name_next(name, &next);
 
@@ -179,8 +177,7 @@ static int direct_loader_immediate_value(const char *name, size_t len,
     return 0;
 }
 
-int load_immediate_value(const char *name, void *dest, size_t len)
-{
+int load_immediate_value(const char *name, void *dest, size_t len) {
     int rc;
     struct direct_immediate_value dov;
 
@@ -188,8 +185,7 @@ int load_immediate_value(const char *name, void *dest, size_t len)
     dov.len = len;
     dov.dest = dest;
 
-    rc = settings_load_subtree_direct(name, direct_loader_immediate_value,
-                      (void *)&dov);
+    rc = settings_load_subtree_direct(name, direct_loader_immediate_value, (void *)&dov);
     if (rc == 0) {
         if (!dov.fetched) {
             rc = -ENOENT;
@@ -198,8 +194,7 @@ int load_immediate_value(const char *name, void *dest, size_t len)
 
     return rc;
 }
-void via_ee_delete(void)
-{
+void via_ee_delete(void) {
     LOG_DBG(".");
     settings_delete("via_ee/magic");
     settings_delete("via_ee/layout");
@@ -209,45 +204,48 @@ void via_ee_delete(void)
     settings_delete("via_ee/macros/len");
     settings_delete("via_ee/macros/datas");
     settings_delete("via_ee/debounce");
+    settings_delete("via_ee/lpm_set");
     // settings_delete("via_ee/changed");
-    char setting_name[20]={0};
-    for(int i=0;i<DYNAMIC_KEYMAP_LAYER_COUNT;i++)
-    {
-        memset(setting_name,0,sizeof(setting_name));
-        sprintf(setting_name,"via_ee/keymaps/%d",i);
+    char setting_name[20] = {0};
+    for (int i = 0; i < DYNAMIC_KEYMAP_LAYER_COUNT; i++) {
+        memset(setting_name, 0, sizeof(setting_name));
+        sprintf(setting_name, "via_ee/keymaps/%d", i);
         settings_delete(setting_name);
-        // memset(setting_name,0,sizeof(setting_name));
+        // memset(setting_name, 0, sizeof(setting_name));
         // sprintf(setting_name,"via_ee/changed/%d",i);
         // settings_delete(setting_name);
     }
 }
-void via_ee_read_all(void)
-{
+void via_ee_read_all(void) {
     int rc;
     rc = load_immediate_value("via_ee/magic", &via_ee_device.magic[0], sizeof(via_ee_device.magic));
     if (rc == -ENOENT) {
-       
-        LOG_DBG("via_ee/magic:%02x%02x%02x (default)\n",via_ee_device.magic[0],via_ee_device.magic[1],via_ee_device.magic[2] );
+
+        LOG_DBG("via_ee/magic:%02x%02x%02x (default)\n", via_ee_device.magic[0],
+                via_ee_device.magic[1], via_ee_device.magic[2]);
     } else if (rc == 0) {
-        LOG_DBG("via_ee/magic:%02x%02x%02x\n",via_ee_device.magic[0],via_ee_device.magic[1],via_ee_device.magic[2] );
+        LOG_DBG("via_ee/magic:%02x%02x%02x\n", via_ee_device.magic[0], via_ee_device.magic[1],
+                via_ee_device.magic[2]);
     }
 
-    rc = load_immediate_value("via_ee/layout", &via_ee_device.layout_options[0], sizeof(via_ee_device.layout_options));
+    rc = load_immediate_value("via_ee/layout", &via_ee_device.layout_options[0],
+                              sizeof(via_ee_device.layout_options));
     if (rc == -ENOENT) {
 
-        LOG_DBG("via_ee/layout:%02x (default)\n",via_ee_device.layout_options[0]);
+        LOG_DBG("via_ee/layout:%02x (default)\n", via_ee_device.layout_options[0]);
     } else if (rc == 0) {
 
-        LOG_DBG("via_ee/layout:%02x \n",via_ee_device.layout_options[0]);
+        LOG_DBG("via_ee/layout:%02x \n", via_ee_device.layout_options[0]);
     }
 
-#if VIA_EEPROM_CUSTOM_CONFIG_SIZE 
-    rc = load_immediate_value("via_ee/custom", &via_ee_device.custom[0], sizeof(via_ee_device.custom));
+#if VIA_EEPROM_CUSTOM_CONFIG_SIZE
+    rc = load_immediate_value("via_ee/custom", &via_ee_device.custom[0],
+                              sizeof(via_ee_device.custom));
     if (rc == -ENOENT) {
        
-        LOG_DBG("via_ee/custom:%02x (default)\n",via_ee_device.custom[0]);
+        LOG_DBG("via_ee/custom:%02x (default)\n", via_ee_device.custom[0]);
     } else if (rc == 0) {
-        LOG_DBG("via_ee/custom:%02x \n",via_ee_device.custom[0]);
+        LOG_DBG("via_ee/custom:%02x \n", via_ee_device.custom[0]);
     }
 #endif     
 
@@ -255,15 +253,17 @@ void via_ee_read_all(void)
     // via_ee_read_changed_keys();
 
 #ifdef ENCODER_MAP_ENABLE
-    rc = load_immediate_value("via_ee/encoder", &via_ee_device.encoder[0], sizeof(via_ee_device.encoder));
+    rc = load_immediate_value("via_ee/encoder", &via_ee_device.encoder[0],
+                              sizeof(via_ee_device.encoder));
     if (rc == -ENOENT) {
        
-        LOG_DBG("via_ee/encoder:%02x (default)\n",via_ee_device.encoder[0]);
+        LOG_DBG("via_ee/encoder:%02x (default)\n", via_ee_device.encoder[0]);
     } else if (rc == 0) {
-        LOG_DBG("via_ee/encoder:%02x \n",via_ee_device.encoder[0]);
+        LOG_DBG("via_ee/encoder:%02x \n", via_ee_device.encoder[0]);
     }
-#endif 
-    //  rc = load_immediate_value("via_ee/macros", &via_ee_device.macros[0], sizeof(via_ee_device.macros));
+#endif
+    //  rc = load_immediate_value("via_ee/macros", &via_ee_device.macros[0],
+    //  sizeof(via_ee_device.macros));
     // if (rc == -ENOENT) {
        
     //     LOG_DBG("via_ee/macros:%02x (default)\n",via_ee_device.macros[0]);
@@ -273,44 +273,48 @@ void via_ee_read_all(void)
     via_ee_read_macros();
 
     via_ee_read_debounce();
+
+    void via_ee_read_lpm(void);
+    via_ee_read_lpm();
 }
 
-void via_ee_read_magic(void)
-{
+void via_ee_read_magic(void) {
     int rc;
     rc = load_immediate_value("via_ee/magic", &via_ee_device.magic[0], sizeof(via_ee_device.magic));
     if (rc == -ENOENT) {
-       
-        LOG_DBG("via_ee/magic:%02x%02x%02x (default)\n",via_ee_device.magic[0],via_ee_device.magic[1],via_ee_device.magic[2] );
+
+        LOG_DBG("via_ee/magic:%02x%02x%02x (default)\n", via_ee_device.magic[0],
+                via_ee_device.magic[1], via_ee_device.magic[2]);
     } else if (rc == 0) {
-        LOG_DBG("via_ee/magic:%02x%02x%02x\n",via_ee_device.magic[0],via_ee_device.magic[1],via_ee_device.magic[2] );
-    }
+        LOG_DBG("via_ee/magic:%02x%02x%02x\n", via_ee_device.magic[0], via_ee_device.magic[1],
+                via_ee_device.magic[2]);
 }
-void via_ee_update_magic(void)
-{
+}
+void via_ee_update_magic(void) {
     int rc;
-    rc = settings_save_one("via_ee/magic", (const void *)&via_ee_device.magic[0], sizeof(via_ee_device.magic));
+    rc = settings_save_one("via_ee/magic", (const void *)&via_ee_device.magic[0],
+                           sizeof(via_ee_device.magic));
     if (rc) {
         LOG_DBG("write failed:%d", rc);
     } else {
         LOG_DBG("OK.\n");
     }
 }
-void via_ee_update_layout(void)
-{
+void via_ee_update_layout(void) {
     int rc;
-    rc = settings_save_one("via_ee/layout", (const void *)&via_ee_device.layout_options[0], sizeof(via_ee_device.layout_options));
+    rc = settings_save_one("via_ee/layout", (const void *)&via_ee_device.layout_options[0],
+                           sizeof(via_ee_device.layout_options));
     if (rc) {
         LOG_DBG("write failed:%d", rc);
     } else {
         LOG_DBG("OK.\n");
     }
 }
-#if VIA_EEPROM_CUSTOM_CONFIG_SIZE 
-void via_ee_update_custom(void)
-{
+#if VIA_EEPROM_CUSTOM_CONFIG_SIZE
+void via_ee_update_custom(void) {
     int rc;
-    rc = settings_save_one("via_ee/custom", (const void *)&via_ee_device.custom[0], sizeof(via_ee_device.custom));
+    rc = settings_save_one("via_ee/custom", (const void *)&via_ee_device.custom[0],
+                           sizeof(via_ee_device.custom));
     if (rc) {
         LOG_DBG("write failed:%d", rc);
     } else {
@@ -318,13 +322,13 @@ void via_ee_update_custom(void)
     }
 }
 #endif
-void via_ee_update_keymap(uint8_t i)
-{
-    if(i >=DYNAMIC_KEYMAP_LAYER_COUNT) return;
+void via_ee_update_keymap(uint8_t i) {
+    if (i >= DYNAMIC_KEYMAP_LAYER_COUNT)
+        return;
     int rc;
     char setting_name[20];
-    sprintf(setting_name,"via_ee/keymaps/%d",i);
-    rc = settings_save_one(setting_name, &via_ee_device.keymaps[i*KEYMAP_LEN], KEYMAP_LEN);
+    sprintf(setting_name, "via_ee/keymaps/%d", i);
+    rc = settings_save_one(setting_name, &via_ee_device.keymaps[i * KEYMAP_LEN], KEYMAP_LEN);
     if (rc) {
         LOG_DBG("write failed:%d", rc);
     } else {
@@ -333,75 +337,78 @@ void via_ee_update_keymap(uint8_t i)
 
     // via_ee_update_changed_keys(i);
 }
-void via_ee_read_keymap(uint8_t layer)
-{
-    if(layer >=DYNAMIC_KEYMAP_LAYER_COUNT) return;
+void via_ee_read_keymap(uint8_t layer) {
+    if (layer >= DYNAMIC_KEYMAP_LAYER_COUNT)
+        return;
     int rc;
     char setting_name[20];
-    sprintf(setting_name,"via_ee/keymaps/%d",layer);
-    LOG_HEXDUMP_DBG(&via_ee_device.keymaps[layer*KEYMAP_LEN],32,"keymap");
-    rc = load_immediate_value(setting_name, &via_ee_device.keymaps[layer*KEYMAP_LEN], KEYMAP_LEN);
+    sprintf(setting_name, "via_ee/keymaps/%d", layer);
+    LOG_HEXDUMP_DBG(&via_ee_device.keymaps[layer * KEYMAP_LEN], 32, "keymap");
+    rc = load_immediate_value(setting_name, &via_ee_device.keymaps[layer * KEYMAP_LEN], KEYMAP_LEN);
     if (rc == -ENOENT) {
-        LOG_DBG("via_ee/keymaps/%d:%02x (default)\n",layer,via_ee_device.keymaps[layer*KEYMAP_LEN]);
+        LOG_DBG("via_ee/keymaps/%d:%02x (default)\n", layer,
+                via_ee_device.keymaps[layer * KEYMAP_LEN]);
     } else if (rc == 0) {
-        LOG_HEXDUMP_DBG(&via_ee_device.keymaps[layer*KEYMAP_LEN],32,"store keymap");
+        LOG_HEXDUMP_DBG(&via_ee_device.keymaps[layer * KEYMAP_LEN], 32, "store keymap");
 
         for (int row = 0; row < MATRIX_ROWS; row++) {
             for (int column = 0; column < MATRIX_COLS; column++) {
-                uint16_t keycode=(via_ee_device.keymaps[layer * KEYMAP_LEN+row*MATRIX_COLS*2+ column*2]<<8) +via_ee_device.keymaps[layer * KEYMAP_LEN+row*MATRIX_COLS*2+ column*2+1];
-                if(keycode !=keycode_at_keymap_location_raw(layer, row, column))
-                {
-                    LOG_DBG("set layer:%d,row:%d,column:%d,keycode:%x",layer,row,column,keycode);
-                    set_zmk_keymap(layer,row,column,keycode);
+                uint16_t keycode =
+                    (via_ee_device.keymaps[layer * KEYMAP_LEN + row * MATRIX_COLS * 2 + column * 2]
+                     << 8) +
+                    via_ee_device
+                        .keymaps[layer * KEYMAP_LEN + row * MATRIX_COLS * 2 + column * 2 + 1];
+                if (keycode != keycode_at_keymap_location_raw(layer, row, column)) {
+                    LOG_DBG("set layer:%d,row:%d,column:%d,keycode:%x", layer, row, column,
+                            keycode);
+#ifdef CONFIG_EN_FIX_CAPS_ALT_DEL
+                    if((layer==0 || layer==2) && (row==5 && column==17) && keycode ==KC_LEFT_CTRL)
+                    {
+                        caps_ctrl_swap = true;
+                    }
+#endif
+                    set_zmk_keymap(layer, row, column, keycode);
                 }
             }
         }
     }
 }
 
-void via_ee_read_keymaps(void)
-{
-    for(int i=0;i<DYNAMIC_KEYMAP_LAYER_COUNT;i++)
-    {
-        via_ee_read_keymap(i);        
+void via_ee_read_keymaps(void) {
+    for (int i = 0; i < DYNAMIC_KEYMAP_LAYER_COUNT; i++) {
+        via_ee_read_keymap(i);
     }
 }
-void via_ee_update_keymaps(void)
-{
-    for(int i=0;i<DYNAMIC_KEYMAP_LAYER_COUNT;i++)
-    {
-        via_ee_update_keymap(i);        
+void via_ee_update_keymaps(void) {
+    for (int i = 0; i < DYNAMIC_KEYMAP_LAYER_COUNT; i++) {
+        via_ee_update_keymap(i);
     }
 }
 #ifdef ENCODER_MAP_ENABLE
-void via_ee_update_encoder(void)
-{
+void via_ee_update_encoder(void) {
     int rc;
-    rc = settings_save_one("via_ee/encoder", (const void *)&via_ee_device.encoder[0], sizeof(via_ee_device.encoder));
+    rc = settings_save_one("via_ee/encoder", (const void *)&via_ee_device.encoder[0],
+                           sizeof(via_ee_device.encoder));
     if (rc) {
         LOG_DBG("write failed:%d", rc);
     } else {
         LOG_DBG("OK.\n");
     }
 }
-#endif 
-int check_macros_len(void)
-{
+#endif
+int check_macros_len(void) {
     int i;
-    for(i= DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE-1;i>=0;i--)
-    {
-        if(via_ee_device.macros[i]!=0)
+    for (i = DYNAMIC_KEYMAP_MACRO_EEPROM_SIZE - 1; i >= 0; i--) {
+        if (via_ee_device.macros[i] != 0)
             break;
     }
-    return i+1;
+    return i + 1;
 }
-void via_ee_update_macros(void)
-{
+void via_ee_update_macros(void) {
     int rc;
-    int len =check_macros_len();
-    LOG_DBG("macros len:%d",len);
-    if(len >0)
-    {
+    int len = check_macros_len();
+    LOG_DBG("macros len:%d", len);
+    if (len > 0) {
         rc = settings_save_one("via_ee/macros/len", (const void *)&len, sizeof(len));
         if (rc) {
             LOG_DBG("write failed:%d", rc);
@@ -416,33 +423,30 @@ void via_ee_update_macros(void)
         }
     }
 }
-void via_ee_delete_macros(void)
-{
+void via_ee_delete_macros(void) {
     LOG_DBG(".");
     settings_delete("via_ee/macros/len");
     settings_delete("via_ee/macros/datas");
 }
-void via_ee_read_macros(void)
-{
+void via_ee_read_macros(void) {
     int rc;
-    int len=0;
-    rc=load_immediate_value("via_ee/macros/len", &len, sizeof(len));
+    int len = 0;
+    rc = load_immediate_value("via_ee/macros/len", &len, sizeof(len));
     if (rc == -ENOENT) {
-        LOG_DBG("via_ee/macros/len:%02x (default)\n",len);
-        memset(&via_ee_device.macros,0,sizeof(via_ee_device.macros));
+        LOG_DBG("via_ee/macros/len:%02x (default)\n", len);
+        memset(&via_ee_device.macros, 0, sizeof(via_ee_device.macros));
     } else if (rc == 0) {
-        LOG_DBG("via_ee/macros/len:%02x \n",len);
+        LOG_DBG("via_ee/macros/len:%02x \n", len);
     }
 
-    if(len >0)
-    {
-        rc=load_immediate_value("via_ee/macros/datas", &via_ee_device.macros[0], len);
+    if (len > 0) {
+        rc = load_immediate_value("via_ee/macros/datas", &via_ee_device.macros[0], len);
         if (rc == -ENOENT) {
            
-            LOG_DBG("via_ee/macros/data:%02x (default)\n",len);
+            LOG_DBG("via_ee/macros/data:%02x (default)\n", len);
         } else if (rc == 0) {
 
-            LOG_HEXDUMP_DBG(&via_ee_device.macros[0],32,"macros");
+            LOG_HEXDUMP_DBG(&via_ee_device.macros[0], 32, "macros");
         }    
     }
 }
@@ -457,7 +461,7 @@ void via_ee_read_macros(void)
 //         rc=load_immediate_value(setting_name, &via_ee_device.changed_keys[i], 20);
 //         if (rc == -ENOENT) {
 //             LOG_DBG("via_ee/changed/%02x (NONE)\n",i);
-//             memset(&via_ee_device.changed_keys[i],0,20);
+//             memset(&via_ee_device.changed_keys[i], 0, 20);
 //         } else if (rc == 0) {
 //             LOG_DBG("layer:%d",i);
 //             LOG_HEXDUMP_DBG(&via_ee_device.changed_keys[i],20,"changed keys");
@@ -474,9 +478,11 @@ void via_ee_read_macros(void)
 //                         uint8_t row =index/MATRIX_COLS;
 //                         uint8_t col = index%MATRIX_COLS;
 //                         uint8_t layer =i;
-//                         uint16_t keycode=(via_ee_device.keymaps[layer * KEYMAP_LEN+row*MATRIX_COLS*2+ col*2]<<8) +via_ee_device.keymaps[layer * KEYMAP_LEN+row*MATRIX_COLS*2+ col*2+1];
-//                         LOG_DBG("key changed,index:%d,row:%d,col:%d,j:%d,bits:%x,keycode:%x",index,row,col,j,bits,keycode);
-//                         set_zmk_keymap(layer,row,col,keycode);
+//                         uint16_t keycode=(via_ee_device.keymaps[layer *
+//                         KEYMAP_LEN+row*MATRIX_COLS*2+ col*2]<<8) +via_ee_device.keymaps[layer *
+//                         KEYMAP_LEN+row*MATRIX_COLS*2+ col*2+1]; LOG_DBG("key
+//                         changed,index:%d,row:%d,col:%d,j:%d,bits:%x,keycode:%x",index,row,col,j,bits,keycode);
+//                         set_zmk_keymap(layer, row, col, keycode);
 //                     }
 //                     bits <<=1;
 //                 }
@@ -499,7 +505,7 @@ void via_ee_read_macros(void)
 //         LOG_DBG("OK.\n");
 //     }
 // }
-// void via_set_changed_key(uint8_t layer,uint8_t row,uint8_t col)
+// void via_set_changed_key(uint8_t layer, uint8_t row, uint8_t col)
 // {
 //     uint8_t index = row*MATRIX_COLS +col;
 //     uint8_t pos = index/8;
@@ -517,16 +523,14 @@ void via_ee_read_macros(void)
 //         settings_delete(setting_name);
 //     }
 // }
-void via_ee_reset_keymaps(void)
-{
+void via_ee_reset_keymaps(void) {
     LOG_DBG(".");
-    char setting_name[20]={0};
-    for(int i=0;i<DYNAMIC_KEYMAP_LAYER_COUNT;i++)
-    {
-        memset(setting_name,0,sizeof(setting_name));
-        sprintf(setting_name,"via_ee/keymaps/%d",i);
+    char setting_name[20] = {0};
+    for (int i = 0; i < DYNAMIC_KEYMAP_LAYER_COUNT; i++) {
+        memset(setting_name, 0, sizeof(setting_name));
+        sprintf(setting_name, "via_ee/keymaps/%d", i);
         settings_delete(setting_name);
-        // memset(setting_name,0,sizeof(setting_name));
+        // memset(setting_name, 0, sizeof(setting_name));
         // sprintf(setting_name,"via_ee/changed/%d",i);
         // settings_delete(setting_name);
     }
@@ -537,39 +541,38 @@ uint32_t matrix_get_row(uint8_t row);
 //     return 0;
 // }
 
-
 void raw_hid_send(uint8_t *data, uint8_t length) {
     // TODO: implement variable size packet
     if (length != RAW_EPSIZE) {
         return;
     }
-    
-    switch(via_path)
-    {
+
+    switch (via_path) {
     case VIA_PATH_USB:
-        zmk_usb_hid_via_send( data, length);
+        zmk_usb_hid_via_send(data, length);
         break;
     case VIA_PATH_BLE:
         break;
     case VIA_PATH_24G:
-        zmk_24g_send_via_report(data,length);
+        zmk_24g_send_via_report(data, length);
         break;
     }
-    
 }
 bool via_eeprom_is_valid(void) {
-    char *  p      = QMK_BUILDDATE; // e.g. "2019-11-05-11:29:54"
+    char *p = QMK_BUILDDATE; // e.g. "2019-11-05-11:29:54"
     uint8_t magic0 = ((p[2] & 0x0F) << 4) | (p[3] & 0x0F);
     uint8_t magic1 = ((p[5] & 0x0F) << 4) | (p[6] & 0x0F);
     uint8_t magic2 = ((p[8] & 0x0F) << 4) | (p[9] & 0x0F);
 
-    return (eeprom_read_byte(VIA_EEPROM_MAGIC_ADDR + 0) == magic0 && eeprom_read_byte(VIA_EEPROM_MAGIC_ADDR + 1) == magic1 && eeprom_read_byte(VIA_EEPROM_MAGIC_ADDR + 2) == magic2);
+    return (eeprom_read_byte(VIA_EEPROM_MAGIC_ADDR + 0) == magic0 &&
+            eeprom_read_byte(VIA_EEPROM_MAGIC_ADDR + 1) == magic1 &&
+            eeprom_read_byte(VIA_EEPROM_MAGIC_ADDR + 2) == magic2);
 }
 
 // Sets VIA/keyboard level usage of EEPROM to valid/invalid
 // Keyboard level code (eg. via_init_kb()) should not call this
 void via_eeprom_set_valid(bool valid) {
-    char *  p      = QMK_BUILDDATE; // e.g. "2019-11-05-11:29:54"
+    char *p = QMK_BUILDDATE; // e.g. "2019-11-05-11:29:54"
     uint8_t magic0 = ((p[2] & 0x0F) << 4) | (p[3] & 0x0F);
     uint8_t magic1 = ((p[5] & 0x0F) << 4) | (p[6] & 0x0F);
     uint8_t magic2 = ((p[8] & 0x0F) << 4) | (p[9] & 0x0F);
@@ -783,9 +786,7 @@ __attribute__((weak)) void via_custom_value_command(uint8_t *data, uint8_t lengt
 // Keyboard level code can override this, but shouldn't need to.
 // Controlling custom features should be done by overriding
 // via_custom_value_command_kb() instead.
-__attribute__((weak)) bool via_command_kb(uint8_t *data, uint8_t length) {
-    return false;
-}
+__attribute__((weak)) bool via_command_kb(uint8_t *data, uint8_t length) { return false; }
 
 void raw_hid_receive(uint8_t *data, uint8_t length) {
     uint8_t *command_id   = &(data[0]);
@@ -802,10 +803,10 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
         sys_reboot(0x4e);
         break;
     case kc_get_protocol_version:
-            command_data[0]=1;
+        command_data[0] = 1;
         break;
     case kc_get_default_layer:
-        command_data[0]=zmk_keymap_highest_layer_active();
+        command_data[0] = zmk_keymap_highest_layer_active();
         break;
     case kc_get_firmware_version:
         // uint32_t value  = ZMK_VERSION;
@@ -813,52 +814,52 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
         // command_data[2] = (value >> 16) & 0xFF;
         // command_data[3] = (value >> 8) & 0xFF;
         // command_data[4] = value & 0xFF;
-        uint8_t offset =0;
-        uint8_t len =strlen(APP_VERSION_STRING);
-        memcpy(&command_data[offset],APP_VERSION_STRING,len);
+        uint8_t offset = 0;
+        uint8_t len = strlen(APP_VERSION_STRING);
+        memcpy(&command_data[offset], APP_VERSION_STRING, len);
 
         offset += len;
-        command_data[offset++] =' ';
-        len =strlen(__DATE__);
-        memcpy(&command_data[offset],__DATE__,len);
+        command_data[offset++] = ' ';
+        len = strlen(__DATE__);
+        memcpy(&command_data[offset], __DATE__, len);
 
         offset += len;
-        command_data[offset++] =' ';    
- 
-        len =strlen(__TIME__);
-        memcpy(&command_data[offset],__TIME__,len);
-        
+        command_data[offset++] = ' ';
+
+        len = strlen(__TIME__);
+        memcpy(&command_data[offset], __TIME__, len);
+
         break;
 
-        case id_get_protocol_version: {
-            command_data[0] = VIA_PROTOCOL_VERSION >> 8;
-            command_data[1] = VIA_PROTOCOL_VERSION & 0xFF;
+    case id_get_protocol_version: {
+        command_data[0] = VIA_PROTOCOL_VERSION >> 8;
+        command_data[1] = VIA_PROTOCOL_VERSION & 0xFF;
+        break;
+    }
+    case id_get_keyboard_value: {
+        switch (command_data[0]) {
+        case id_uptime: {
+            uint32_t value = k_uptime_get(); // timer_read32();
+            command_data[1] = (value >> 24) & 0xFF;
+            command_data[2] = (value >> 16) & 0xFF;
+            command_data[3] = (value >> 8) & 0xFF;
+            command_data[4] = value & 0xFF;
             break;
         }
-        case id_get_keyboard_value: {
-            switch (command_data[0]) {
-                case id_uptime: {
-                    uint32_t value  = k_uptime_get();//timer_read32();
-                    command_data[1] = (value >> 24) & 0xFF;
-                    command_data[2] = (value >> 16) & 0xFF;
-                    command_data[3] = (value >> 8) & 0xFF;
-                    command_data[4] = value & 0xFF;
-                    break;
-                }
-                case id_layout_options: {
-                    uint32_t value  = via_get_layout_options();
-                    command_data[1] = (value >> 24) & 0xFF;
-                    command_data[2] = (value >> 16) & 0xFF;
-                    command_data[3] = (value >> 8) & 0xFF;
-                    command_data[4] = value & 0xFF;
-                    break;
-                }
-                case id_switch_matrix_state: {
-                    uint8_t offset = command_data[1];
-                    uint8_t rows   = 28 / ((MATRIX_COLS + 7) / 8);
-                    uint8_t i      = 2;
-                    for (uint8_t row = 0; row < rows && row + offset < MATRIX_ROWS; row++) {
-                        matrix_row_t value = matrix_get_row(row + offset);
+        case id_layout_options: {
+            uint32_t value = via_get_layout_options();
+            command_data[1] = (value >> 24) & 0xFF;
+            command_data[2] = (value >> 16) & 0xFF;
+            command_data[3] = (value >> 8) & 0xFF;
+            command_data[4] = value & 0xFF;
+            break;
+        }
+        case id_switch_matrix_state: {
+            uint8_t offset = command_data[1];
+            uint8_t rows = 28 / ((MATRIX_COLS + 7) / 8);
+            uint8_t i = 2;
+            for (uint8_t row = 0; row < rows && row + offset < MATRIX_ROWS; row++) {
+                matrix_row_t value = matrix_get_row(row + offset);
 #if (MATRIX_COLS > 24)
                         command_data[i++] = (value >> 24) & 0xFF;
 #endif
@@ -868,156 +869,168 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
 #if (MATRIX_COLS > 8)
                         command_data[i++] = (value >> 8) & 0xFF;
 #endif
-                        command_data[i++] = value & 0xFF;
-                    }
-                    break;
-                }
-                case id_firmware_version: {
-                    uint32_t value  = VIA_FIRMWARE_VERSION;
-                    command_data[1] = (value >> 24) & 0xFF;
-                    command_data[2] = (value >> 16) & 0xFF;
-                    command_data[3] = (value >> 8) & 0xFF;
-                    command_data[4] = value & 0xFF;
-                    break;
-                }
-                default: {
-                    // The value ID is not known
-                    // Return the unhandled state
-                    *command_id = id_unhandled;
-                    break;
-                }
+                command_data[i++] = value & 0xFF;
             }
             break;
         }
-        case id_set_keyboard_value: {
-            switch (command_data[0]) {
-                case id_layout_options: {
-                    uint32_t value = ((uint32_t)command_data[1] << 24) | ((uint32_t)command_data[2] << 16) | ((uint32_t)command_data[3] << 8) | (uint32_t)command_data[4];
-                    via_set_layout_options(value);
-                    break;
-                }
-                case id_device_indication: {
-                    uint8_t value = command_data[1];
-                    via_set_device_indication(value);
-                    break;
-                }
-                default: {
-                    // The value ID is not known
-                    // Return the unhandled state
-                    *command_id = id_unhandled;
-                    break;
-                }
-            }
+        case id_firmware_version: {
+            uint32_t value = VIA_FIRMWARE_VERSION;
+            command_data[1] = (value >> 24) & 0xFF;
+            command_data[2] = (value >> 16) & 0xFF;
+            command_data[3] = (value >> 8) & 0xFF;
+            command_data[4] = value & 0xFF;
             break;
         }
-        case id_dynamic_keymap_get_keycode: {
-            uint16_t keycode = dynamic_keymap_get_keycode(command_data[0], command_data[1], command_data[2]);
-            command_data[3]  = keycode >> 8;
-            command_data[4]  = keycode & 0xFF;
-            break;
-        }
-        case id_dynamic_keymap_set_keycode: {
-            dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2], (command_data[3] << 8) | command_data[4]);
-            break;
-        }
-        case id_dynamic_keymap_reset: {
-            dynamic_keymap_reset(true);
-            
-            break;
-        }
-        case id_custom_set_value:
-        case id_custom_get_value:
-        case id_custom_save: {
-            via_custom_value_command(data, length);
-            break;
-        }
-#ifdef VIA_EEPROM_ALLOW_RESET
-        case id_eeprom_reset: {
-            via_eeprom_set_valid(false);
-            eeconfig_init_via();
-            break;
-        }
-#endif
-        case id_dynamic_keymap_macro_get_count: {
-            command_data[0] = dynamic_keymap_macro_get_count();
-            break;
-        }
-        case id_dynamic_keymap_macro_get_buffer_size: {
-            uint16_t size   = dynamic_keymap_macro_get_buffer_size();
-            command_data[0] = size >> 8;
-            command_data[1] = size & 0xFF;
-            break;
-        }
-        case id_dynamic_keymap_macro_get_buffer: {
-            uint16_t offset = (command_data[0] << 8) | command_data[1];
-            uint16_t size   = command_data[2]; // size <= 28
-            dynamic_keymap_macro_get_buffer(offset, size, &command_data[3]);
-            break;
-        }
-        case id_dynamic_keymap_macro_set_buffer: {
-            uint16_t offset = (command_data[0] << 8) | command_data[1];
-            uint16_t size   = command_data[2]; // size <= 28
-            dynamic_keymap_macro_set_buffer(offset, size, &command_data[3]);
-            break;
-        }
-        case id_dynamic_keymap_macro_reset: {
-            dynamic_keymap_macro_reset(true);
-            break;
-        }
-        case id_dynamic_keymap_get_layer_count: {
-            command_data[0] = dynamic_keymap_get_layer_count();
-            break;
-        }
-        case id_dynamic_keymap_get_buffer: {
-            uint16_t offset = (command_data[0] << 8) | command_data[1];
-            uint16_t size   = command_data[2]; // size <= 28
-            dynamic_keymap_get_buffer(offset, size, &command_data[3]);
-            break;
-        }
-        case id_dynamic_keymap_set_buffer: {
-            uint16_t offset = (command_data[0] << 8) | command_data[1];
-            uint16_t size   = command_data[2]; // size <= 28
-            dynamic_keymap_set_buffer(offset, size, &command_data[3]);
-            break;
-        }
-#ifdef ENCODER_MAP_ENABLE
-        case id_dynamic_keymap_get_encoder: {
-            uint16_t keycode = dynamic_keymap_get_encoder(command_data[0], command_data[1], command_data[2] != 0);
-            command_data[3]  = keycode >> 8;
-            command_data[4]  = keycode & 0xFF;
-            break;
-        }
-        case id_dynamic_keymap_set_encoder: {
-            dynamic_keymap_set_encoder(command_data[0], command_data[1], command_data[2] != 0, (command_data[3] << 8) | command_data[4]);
-            break;
-        }
-#endif
-        case 0xAB:
-            factory_test_rx(data, length);
-            break;
-
-        case kc_set_key_debounce:
-            if(command_data[0]==0 || command_data[1]==0 ||command_data[2] ==0)
-            {
-                break;
-            }
-            user_set_debounce(command_data[0],command_data[1],command_data[2]);
-            debouce.scan_period_ms =command_data[0];
-            debouce.debounce_press_ms = command_data[1];
-            debouce.debounce_release_ms = command_data[2];
-            via_save_debounce();
-            break;
-        case kc_get_key_debounce:
-            command_data[0] =debouce.scan_period_ms;
-            command_data[1] =debouce.debounce_press_ms;
-            command_data[2] =debouce.debounce_release_ms;
-            break;
         default: {
-            // The command ID is not known
+            // The value ID is not known
             // Return the unhandled state
             *command_id = id_unhandled;
             break;
         }
+        }
+        break;
+    }
+    case id_set_keyboard_value: {
+        switch (command_data[0]) {
+        case id_layout_options: {
+            uint32_t value = ((uint32_t)command_data[1] << 24) | ((uint32_t)command_data[2] << 16) |
+                             ((uint32_t)command_data[3] << 8) | (uint32_t)command_data[4];
+            via_set_layout_options(value);
+            break;
+        }
+        case id_device_indication: {
+            uint8_t value = command_data[1];
+            via_set_device_indication(value);
+            break;
+        }
+        default: {
+            // The value ID is not known
+            // Return the unhandled state
+            *command_id = id_unhandled;
+            break;
+        }
+        }
+        break;
+    }
+    case id_dynamic_keymap_get_keycode: {
+        uint16_t keycode =
+            dynamic_keymap_get_keycode(command_data[0], command_data[1], command_data[2]);
+        command_data[3] = keycode >> 8;
+        command_data[4] = keycode & 0xFF;
+        break;
+    }
+    case id_dynamic_keymap_set_keycode: {
+        dynamic_keymap_set_keycode(command_data[0], command_data[1], command_data[2],
+                                   (command_data[3] << 8) | command_data[4]);
+        break;
+    }
+    case id_dynamic_keymap_reset: {
+        dynamic_keymap_reset(true);
+
+        break;
+    }
+    case id_custom_set_value:
+    case id_custom_get_value:
+    case id_custom_save: {
+        via_custom_value_command(data, length);
+        break;
+    }
+#ifdef VIA_EEPROM_ALLOW_RESET
+    case id_eeprom_reset: {
+        via_eeprom_set_valid(false);
+        eeconfig_init_via();
+        break;
+    }
+#endif
+    case id_dynamic_keymap_macro_get_count: {
+        command_data[0] = dynamic_keymap_macro_get_count();
+        break;
+    }
+    case id_dynamic_keymap_macro_get_buffer_size: {
+        uint16_t size = dynamic_keymap_macro_get_buffer_size();
+        command_data[0] = size >> 8;
+        command_data[1] = size & 0xFF;
+        break;
+    }
+    case id_dynamic_keymap_macro_get_buffer: {
+        uint16_t offset = (command_data[0] << 8) | command_data[1];
+        uint16_t size = command_data[2]; // size <= 28
+        dynamic_keymap_macro_get_buffer(offset, size, &command_data[3]);
+        break;
+    }
+    case id_dynamic_keymap_macro_set_buffer: {
+        uint16_t offset = (command_data[0] << 8) | command_data[1];
+        uint16_t size = command_data[2]; // size <= 28
+        dynamic_keymap_macro_set_buffer(offset, size, &command_data[3]);
+        break;
+    }
+    case id_dynamic_keymap_macro_reset: {
+        dynamic_keymap_macro_reset(true);
+        break;
+    }
+    case id_dynamic_keymap_get_layer_count: {
+        command_data[0] = dynamic_keymap_get_layer_count();
+        break;
+    }
+    case id_dynamic_keymap_get_buffer: {
+        uint16_t offset = (command_data[0] << 8) | command_data[1];
+        uint16_t size = command_data[2]; // size <= 28
+        dynamic_keymap_get_buffer(offset, size, &command_data[3]);
+        break;
+    }
+    case id_dynamic_keymap_set_buffer: {
+        uint16_t offset = (command_data[0] << 8) | command_data[1];
+        uint16_t size = command_data[2]; // size <= 28
+        dynamic_keymap_set_buffer(offset, size, &command_data[3]);
+        break;
+    }
+#ifdef ENCODER_MAP_ENABLE
+    case id_dynamic_keymap_get_encoder: {
+        uint16_t keycode =
+            dynamic_keymap_get_encoder(command_data[0], command_data[1], command_data[2] != 0);
+        command_data[3] = keycode >> 8;
+        command_data[4] = keycode & 0xFF;
+        break;
+    }
+    case id_dynamic_keymap_set_encoder: {
+        dynamic_keymap_set_encoder(command_data[0], command_data[1], command_data[2] != 0,
+                                   (command_data[3] << 8) | command_data[4]);
+        break;
+    }
+#endif
+    case 0xa2://kc_get_support_feature:
+        command_data[0]= (0x01<<0) |(0x01<<5); //layer debounce;
+        break;
+    case 0xa7:
+        void kc_user_cmd(uint8_t *command_data);
+        kc_user_cmd(command_data);
+        if(command_data[0] == 0x0d) return ;//skip poll rate!
+        break;
+    case 0xAB:
+        factory_test_rx(data, length);
+        break;
+
+    // case kc_set_key_debounce:
+    //     if (command_data[0] == 0 || command_data[1] == 0 || command_data[2] == 0) {
+    //         break;
+    //     }
+    //     user_set_debounce(command_data[0], command_data[1], command_data[2]);
+    //     debouce.scan_period_ms = command_data[0];
+    //     debouce.debounce_press_ms = command_data[1];
+    //     debouce.debounce_release_ms = command_data[2];
+    //     via_save_debounce();
+    //     break;
+    // case kc_get_key_debounce:
+    //     command_data[0] = debouce.scan_period_ms;
+    //     command_data[1] = debouce.debounce_press_ms;
+    //     command_data[2] = debouce.debounce_release_ms;
+    //     break;
+    default: {
+        // The command ID is not known
+        // Return the unhandled state
+        *command_id = id_unhandled;
+        break;
+    }
     }
 
     // Return the same buffer, optionally with values changed
@@ -1052,9 +1065,9 @@ void via_qmk_backlight_command(uint8_t *data, uint8_t length) {
     }
 }
 
-#    if BACKLIGHT_LEVELS == 0
-#        error BACKLIGHT_LEVELS == 0
-#    endif
+#if BACKLIGHT_LEVELS == 0
+#error BACKLIGHT_LEVELS == 0
+#endif
 
 void via_qmk_backlight_get_value(uint8_t *data) {
     // data = [ value_id, value_data ]
@@ -1067,11 +1080,11 @@ void via_qmk_backlight_get_value(uint8_t *data) {
             break;
         }
         case id_qmk_backlight_effect: {
-#    ifdef BACKLIGHT_BREATHING
+#ifdef BACKLIGHT_BREATHING
             value_data[0] = is_backlight_breathing() ? 1 : 0;
-#    else
+#else
             value_data[0] = 0;
-#    endif
+#endif
             break;
         }
     }
@@ -1082,34 +1095,32 @@ void via_qmk_backlight_set_value(uint8_t *data) {
     uint8_t *value_id   = &(data[0]);
     uint8_t *value_data = &(data[1]);
     switch (*value_id) {
-        case id_qmk_backlight_brightness: {
-            // level / 255 * BACKLIGHT_LEVELS
-            backlight_level_noeeprom(((uint16_t)value_data[0] * BACKLIGHT_LEVELS) / UINT8_MAX);
-            break;
+    case id_qmk_backlight_brightness: {
+        // level / 255 * BACKLIGHT_LEVELS
+        backlight_level_noeeprom(((uint16_t)value_data[0] * BACKLIGHT_LEVELS) / UINT8_MAX);
+        break;
+    }
+    case id_qmk_backlight_effect: {
+#ifdef BACKLIGHT_BREATHING
+        if (value_data[0] == 0) {
+            backlight_disable_breathing();
+        } else {
+            backlight_enable_breathing();
         }
-        case id_qmk_backlight_effect: {
-#    ifdef BACKLIGHT_BREATHING
-            if (value_data[0] == 0) {
-                backlight_disable_breathing();
-            } else {
-                backlight_enable_breathing();
-            }
-#    endif
-            break;
-        }
+#endif
+        break;
+    }
     }
 }
 
-void via_qmk_backlight_save(void) {
-    eeconfig_update_backlight_current();
-}
+void via_qmk_backlight_save(void) { eeconfig_update_backlight_current(); }
 
 #endif // BACKLIGHT_ENABLE
 
 #if defined(RGBLIGHT_ENABLE)
-#    ifndef RGBLIGHT_LIMIT_VAL
-#        define RGBLIGHT_LIMIT_VAL 255
-#    endif
+#ifndef RGBLIGHT_LIMIT_VAL
+#define RGBLIGHT_LIMIT_VAL 255
+#endif
 
 void via_qmk_rgblight_command(uint8_t *data, uint8_t length) {
     // data = [ command_id, channel_id, value_id, value_data ]
@@ -1166,33 +1177,32 @@ void via_qmk_rgblight_set_value(uint8_t *data) {
     uint8_t *value_id   = &(data[0]);
     uint8_t *value_data = &(data[1]);
     switch (*value_id) {
-        case id_qmk_rgblight_brightness: {
-            rgblight_sethsv_noeeprom(rgblight_get_hue(), rgblight_get_sat(), ((uint16_t)value_data[0] * RGBLIGHT_LIMIT_VAL) / UINT8_MAX);
-            break;
+    case id_qmk_rgblight_brightness: {
+        rgblight_sethsv_noeeprom(rgblight_get_hue(), rgblight_get_sat(),
+                                 ((uint16_t)value_data[0] * RGBLIGHT_LIMIT_VAL) / UINT8_MAX);
+        break;
+    }
+    case id_qmk_rgblight_effect: {
+        if (value_data[0] == 0) {
+            rgblight_disable_noeeprom();
+        } else {
+            rgblight_enable_noeeprom();
+            rgblight_mode_noeeprom(value_data[0]);
         }
-        case id_qmk_rgblight_effect: {
-            if (value_data[0] == 0) {
-                rgblight_disable_noeeprom();
-            } else {
-                rgblight_enable_noeeprom();
-                rgblight_mode_noeeprom(value_data[0]);
-            }
-            break;
-        }
-        case id_qmk_rgblight_effect_speed: {
-            rgblight_set_speed_noeeprom(value_data[0]);
-            break;
-        }
-        case id_qmk_rgblight_color: {
-            rgblight_sethsv_noeeprom(value_data[0], value_data[1], rgblight_get_val());
-            break;
-        }
+        break;
+    }
+    case id_qmk_rgblight_effect_speed: {
+        rgblight_set_speed_noeeprom(value_data[0]);
+        break;
+    }
+    case id_qmk_rgblight_color: {
+        rgblight_sethsv_noeeprom(value_data[0], value_data[1], rgblight_get_val());
+        break;
+    }
     }
 }
 
-void via_qmk_rgblight_save(void) {
-    eeconfig_update_rgblight_current();
-}
+void via_qmk_rgblight_save(void) { eeconfig_update_rgblight_current(); }
 
 #endif // QMK_RGBLIGHT_ENABLE
 
@@ -1229,23 +1239,24 @@ void via_qmk_rgb_matrix_get_value(uint8_t *data) {
     uint8_t *value_data = &(data[1]);
 
     switch (*value_id) {
-        case id_qmk_rgb_matrix_brightness: {
-            value_data[0] = ((uint16_t)rgb_matrix_get_val() * UINT8_MAX) / RGB_MATRIX_MAXIMUM_BRIGHTNESS;
-            break;
-        }
-        case id_qmk_rgb_matrix_effect: {
-            value_data[0] = rgb_matrix_is_enabled() ? rgb_matrix_get_mode() : 0;
-            break;
-        }
-        case id_qmk_rgb_matrix_effect_speed: {
-            value_data[0] = rgb_matrix_get_speed();
-            break;
-        }
-        case id_qmk_rgb_matrix_color: {
-            value_data[0] = rgb_matrix_get_hue();
-            value_data[1] = rgb_matrix_get_sat();
-            break;
-        }
+    case id_qmk_rgb_matrix_brightness: {
+        value_data[0] =
+            ((uint16_t)rgb_matrix_get_val() * UINT8_MAX) / RGB_MATRIX_MAXIMUM_BRIGHTNESS;
+        break;
+    }
+    case id_qmk_rgb_matrix_effect: {
+        value_data[0] = rgb_matrix_is_enabled() ? rgb_matrix_get_mode() : 0;
+        break;
+    }
+    case id_qmk_rgb_matrix_effect_speed: {
+        value_data[0] = rgb_matrix_get_speed();
+        break;
+    }
+    case id_qmk_rgb_matrix_color: {
+        value_data[0] = rgb_matrix_get_hue();
+        value_data[1] = rgb_matrix_get_sat();
+        break;
+    }
     }
 }
 
@@ -1254,33 +1265,32 @@ void via_qmk_rgb_matrix_set_value(uint8_t *data) {
     uint8_t *value_id   = &(data[0]);
     uint8_t *value_data = &(data[1]);
     switch (*value_id) {
-        case id_qmk_rgb_matrix_brightness: {
-            rgb_matrix_sethsv_noeeprom(rgb_matrix_get_hue(), rgb_matrix_get_sat(), scale8(value_data[0], RGB_MATRIX_MAXIMUM_BRIGHTNESS));
-            break;
+    case id_qmk_rgb_matrix_brightness: {
+        rgb_matrix_sethsv_noeeprom(rgb_matrix_get_hue(), rgb_matrix_get_sat(),
+                                   scale8(value_data[0], RGB_MATRIX_MAXIMUM_BRIGHTNESS));
+        break;
+    }
+    case id_qmk_rgb_matrix_effect: {
+        if (value_data[0] == 0) {
+            rgb_matrix_disable_noeeprom();
+        } else {
+            rgb_matrix_enable_noeeprom();
+            rgb_matrix_mode_noeeprom(value_data[0]);
         }
-        case id_qmk_rgb_matrix_effect: {
-            if (value_data[0] == 0) {
-                rgb_matrix_disable_noeeprom();
-            } else {
-                rgb_matrix_enable_noeeprom();
-                rgb_matrix_mode_noeeprom(value_data[0]);
-            }
-            break;
-        }
-        case id_qmk_rgb_matrix_effect_speed: {
-            rgb_matrix_set_speed_noeeprom(value_data[0]);
-            break;
-        }
-        case id_qmk_rgb_matrix_color: {
-            rgb_matrix_sethsv_noeeprom(value_data[0], value_data[1], rgb_matrix_get_val());
-            break;
-        }
+        break;
+    }
+    case id_qmk_rgb_matrix_effect_speed: {
+        rgb_matrix_set_speed_noeeprom(value_data[0]);
+        break;
+    }
+    case id_qmk_rgb_matrix_color: {
+        rgb_matrix_sethsv_noeeprom(value_data[0], value_data[1], rgb_matrix_get_val());
+        break;
+    }
     }
 }
 
-void via_qmk_rgb_matrix_save(void) {
-    eeconfig_update_rgb_matrix();
-}
+void via_qmk_rgb_matrix_save(void) { eeconfig_update_rgb_matrix(); }
 
 #endif // RGB_MATRIX_ENABLE
 
@@ -1317,18 +1327,19 @@ void via_qmk_led_matrix_get_value(uint8_t *data) {
     uint8_t *value_data = &(data[1]);
 
     switch (*value_id) {
-        case id_qmk_led_matrix_brightness: {
-            value_data[0] = ((uint16_t)led_matrix_get_val() * UINT8_MAX) / LED_MATRIX_MAXIMUM_BRIGHTNESS;
-            break;
-        }
-        case id_qmk_led_matrix_effect: {
-            value_data[0] = led_matrix_is_enabled() ? led_matrix_get_mode() : 0;
-            break;
-        }
-        case id_qmk_led_matrix_effect_speed: {
-            value_data[0] = led_matrix_get_speed();
-            break;
-        }
+    case id_qmk_led_matrix_brightness: {
+        value_data[0] =
+            ((uint16_t)led_matrix_get_val() * UINT8_MAX) / LED_MATRIX_MAXIMUM_BRIGHTNESS;
+        break;
+    }
+    case id_qmk_led_matrix_effect: {
+        value_data[0] = led_matrix_is_enabled() ? led_matrix_get_mode() : 0;
+        break;
+    }
+    case id_qmk_led_matrix_effect_speed: {
+        value_data[0] = led_matrix_get_speed();
+        break;
+    }
     }
 }
 
@@ -1337,29 +1348,27 @@ void via_qmk_led_matrix_set_value(uint8_t *data) {
     uint8_t *value_id   = &(data[0]);
     uint8_t *value_data = &(data[1]);
     switch (*value_id) {
-        case id_qmk_led_matrix_brightness: {
-            led_matrix_set_val_noeeprom(scale8(value_data[0], LED_MATRIX_MAXIMUM_BRIGHTNESS));
-            break;
+    case id_qmk_led_matrix_brightness: {
+        led_matrix_set_val_noeeprom(scale8(value_data[0], LED_MATRIX_MAXIMUM_BRIGHTNESS));
+        break;
+    }
+    case id_qmk_led_matrix_effect: {
+        if (value_data[0] == 0) {
+            led_matrix_disable_noeeprom();
+        } else {
+            led_matrix_enable_noeeprom();
+            led_matrix_mode_noeeprom(value_data[0]);
         }
-        case id_qmk_led_matrix_effect: {
-            if (value_data[0] == 0) {
-                led_matrix_disable_noeeprom();
-            } else {
-                led_matrix_enable_noeeprom();
-                led_matrix_mode_noeeprom(value_data[0]);
-            }
-            break;
-        }
-        case id_qmk_led_matrix_effect_speed: {
-            led_matrix_set_speed_noeeprom(value_data[0]);
-            break;
-        }
+        break;
+    }
+    case id_qmk_led_matrix_effect_speed: {
+        led_matrix_set_speed_noeeprom(value_data[0]);
+        break;
+    }
     }
 }
 
-void via_qmk_led_matrix_save(void) {
-    eeconfig_update_led_matrix();
-}
+void via_qmk_led_matrix_save(void) { eeconfig_update_led_matrix(); }
 
 #endif // LED_MATRIX_ENABLE
 
@@ -1413,20 +1422,18 @@ void via_qmk_audio_set_value(uint8_t *data) {
     uint8_t *value_id   = &(data[0]);
     uint8_t *value_data = &(data[1]);
     switch (*value_id) {
-        case id_qmk_audio_enable: {
-            audio_config.enable = value_data[0] ? 1 : 0;
-            break;
-        }
-        case id_qmk_audio_clicky_enable: {
-            audio_config.clicky_enable = value_data[0] ? 1 : 0;
-            break;
-        }
+    case id_qmk_audio_enable: {
+        audio_config.enable = value_data[0] ? 1 : 0;
+        break;
+    }
+    case id_qmk_audio_clicky_enable: {
+        audio_config.clicky_enable = value_data[0] ? 1 : 0;
+        break;
+    }
     }
 }
 
-void via_qmk_audio_save(void) {
-    eeconfig_update_audio(audio_config.raw);
-}
+void via_qmk_audio_save(void) { eeconfig_update_audio(audio_config.raw); }
 
 #endif // QMK_AUDIO_ENABLE
 
@@ -1447,7 +1454,6 @@ void factory_test_send(uint8_t *payload, uint8_t length) {
     data[RAW_EPSIZE - 1] = (checksum >> 8) & 0xFF;
 
     raw_hid_send(data, RAW_EPSIZE);
-
 }
 enum {
     FACTORY_TEST_CMD_BACKLIGHT = 0x01,
@@ -1470,25 +1476,23 @@ void factory_test_rx(uint8_t *data, uint8_t length) {
             checksum += data[i];
         }
         /* Verify checksum */
-        if ((checksum & 0xFF) != data[RAW_EPSIZE - 2] || checksum >> 8 != data[RAW_EPSIZE - 1]) return;
-
-
+        if ((checksum & 0xFF) != data[RAW_EPSIZE - 2] || checksum >> 8 != data[RAW_EPSIZE - 1])
+            return;
 
         switch (data[1]) {
 
-            case FACTORY_TEST_CMD_OS_SWITCH:
-                report_os_sw_state = data[2];
-                if (report_os_sw_state) {
-                    // dip_switch_read(true);
-                }
-                break;
-
+        case FACTORY_TEST_CMD_OS_SWITCH:
+            report_os_sw_state = data[2];
+            if (report_os_sw_state) {
+                // dip_switch_read(true);
+            }
+            break;
         }
     }
 }
 
 bool dip_switch_update_user(uint8_t index, bool active) {
-    LOG_ERR("index:%d,active:%d",index,active);
+    LOG_ERR("index:%d,active:%d", index, active);
     if (report_os_sw_state) {
 
         uint8_t payload[3] = {FACTORY_TEST_CMD_OS_SWITCH, OS_SWITCH, active};
@@ -1497,9 +1501,9 @@ bool dip_switch_update_user(uint8_t index, bool active) {
 
     return true;
 }
+void set_fn_win_lock(uint8_t lock);
 
-void via_ee_read_debounce(void)
-{
+void via_ee_read_debounce(void) {
     int rc;
     rc = load_immediate_value("via_ee/debounce", &debouce, sizeof(debouce));
     if (rc == -ENOENT) {
@@ -1508,14 +1512,16 @@ void via_ee_read_debounce(void)
         debouce.scan_period_ms = DT_PROP(DT_NODELABEL(kscan0), debounce_scan_period_ms);
         debouce.debounce_press_ms = DT_PROP(DT_NODELABEL(kscan0), debounce_press_ms);
         debouce.debounce_release_ms = DT_PROP(DT_NODELABEL(kscan0), debounce_release_ms);
+        debouce.win_lock = 0;
     } else if (rc == 0) {
-        user_set_debounce(debouce.scan_period_ms,debouce.debounce_press_ms,debouce.debounce_release_ms);
+        user_set_debounce(debouce.scan_period_ms, debouce.debounce_press_ms,
+                          debouce.debounce_release_ms);
+        set_fn_win_lock(debouce.win_lock ? 0xff : 0);
     }
-    LOG_ERR("via_ee/debounce:%02x%02x%02x\n",debouce.scan_period_ms,debouce.debounce_press_ms,debouce.debounce_release_ms );
-
+    LOG_ERR("via_ee/debounce:%02x%02x%02x,lock:%d\n", debouce.scan_period_ms,
+            debouce.debounce_press_ms, debouce.debounce_release_ms, debouce.win_lock);
 }
-void via_ee_update_debounce(void)
-{
+void via_ee_update_debounce(void) {
     int rc;
     rc = settings_save_one("via_ee/debounce", (const void *)&debouce, sizeof(debouce));
     if (rc) {
@@ -1525,3 +1531,124 @@ void via_ee_update_debounce(void)
     }
 }
 
+void save_fn_win_lock(uint8_t winlock) {
+    debouce.win_lock = winlock;
+    via_save_debounce();
+}
+
+#include <zmk/activity.h>
+extern lpm_settings_t lpm_set;
+enum {
+    kc_user_cmd_protocol = 0x01,
+    kc_user_cmd_dfu_info = 0x02,
+    kc_user_cmd_kb_lang  = 0x03,
+    kc_user_cmd_set_kb_lang =0x04,
+    kc_user_cmd_debounce = 0x05,
+    kc_user_cmd_set_debounce = 0x06,
+    kc_user_cmd_snap_click_get_info, // SNAP_CLICK_GET_INFO,
+    kc_user_cmd_snap_click_get, // SNAP_CLICK_GET,
+    kc_user_cmd_snap_click_set, //SNAP_CLICK_SET,
+    kc_user_cmd_snap_click_save, //SNAP_CLICK_SAVE,
+    kc_user_cmd_sleep_time =0x0b,
+    kc_user_cmd_set_sleep_time =0x0c,
+    kc_user_cmd_report_rate =0x0d,
+    kc_user_cmd_set_report_rate =0x0e,
+};
+/*
+write : cmd data
+ACK   : cmd result  data
+result =0 suc , 1 fail;
+*/
+void kc_user_cmd(uint8_t *command_data)
+{
+    uint8_t cmd= command_data[0];
+    LOG_ERR("kc cmd:%x",cmd);
+    switch(cmd)
+    {
+        case kc_user_cmd_protocol:
+            command_data [1] = 0;
+            command_data [2] = 1;
+            command_data [3] = 0;
+            break;
+
+        case kc_user_cmd_debounce:
+            command_data [1] = 0; //result
+            command_data [2] = 1; //solution
+            command_data [3] = debouce.debounce_press_ms;
+            command_data [4] = debouce.debounce_release_ms;
+            LOG_ERR("kc read debounce[%d,%d]",debouce.debounce_press_ms,debouce.debounce_release_ms);
+            break;
+        case kc_user_cmd_set_debounce:
+
+            if(command_data[1]>50 || (command_data[2]>50 || command_data[2]==0))
+            {
+                command_data[1] =1;
+                command_data[2] =0;
+            }
+            else
+            {
+                debouce.debounce_press_ms = command_data[1];
+                debouce.debounce_release_ms =command_data[2];
+                user_set_debounce(debouce.scan_period_ms, debouce.debounce_press_ms, debouce.debounce_release_ms);
+                LOG_ERR("kc set debounce[%d,%d]",debouce.debounce_press_ms,debouce.debounce_release_ms);
+                via_save_debounce();
+                command_data[1] =0;
+                command_data[2] =0;
+            }
+            break;
+
+            case kc_user_cmd_sleep_time:
+
+            {
+                uint16_t idle_time =0 ;
+                uint16_t sleep_time=0;
+                get_lpm_set(&idle_time, &sleep_time);
+                command_data[1]=0;
+                // command_data[2]=idle_time &0xff;
+                // command_data[3]=idle_time >>8;
+                command_data[2]=0; // don't disp backlight in launcher.
+                command_data[3]=0; //
+
+                command_data[4]=sleep_time &0xff;
+                command_data[5]=sleep_time >>8;
+
+            }
+            break;
+            case kc_user_cmd_set_sleep_time:
+            {
+                uint16_t idle_time =0 ;
+                uint16_t sleep_time=0;
+                get_lpm_set(&idle_time, &sleep_time);
+                // idle_time = command_data[1]|command_data[2]<<8;
+                sleep_time = command_data[3]|command_data[4]<<8;
+                LOG_ERR("idle time:%d,sleep:%d",idle_time,sleep_time);
+                if(idle_time<5 || sleep_time <60)
+                {
+                    command_data[1]=1;
+                }
+                else
+                {
+                    command_data[1]=0;
+                    set_lpm_set(idle_time, sleep_time);
+                }
+            }
+            break;
+        case kc_user_cmd_report_rate:
+            command_data[1] =1;
+            command_data[2] =0;
+        break;
+    }
+}
+
+void via_ee_read_lpm(void)
+{
+    int rc;
+
+    rc = load_immediate_value("via_ee/lpm_set", &lpm_set, sizeof(debouce));
+    if (rc == -ENOENT) {
+         LOG_DBG("via_ee/lpm_set,(default)\n");
+    } else if (rc == 0) {
+        LOG_ERR("setting,lpm idle:%d,sleep:%d",lpm_set.max_idle_time,lpm_set.max_sleep_time);
+        update_lpm_set(lpm_set.max_idle_time, lpm_set.max_sleep_time);
+    }
+}

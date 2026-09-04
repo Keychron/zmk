@@ -202,6 +202,8 @@ int zmk_ble_prof_select(uint8_t index);
 void hid_disconnected(struct bt_conn *conn, uint8_t reason);
 void insert_conn_object(struct bt_conn *conn);
 void load_identities(void);
+void hog_send_queue_data_on_connection(void);
+uint8_t sec_ready;
 struct switch_to_adv {
     uint8_t adv_type : 4;
     uint8_t index : 4;
@@ -567,7 +569,7 @@ static void factory_recover_work_cb(struct k_work *work)
     static uint8_t state =0;
     if(state==0)
     {
-        led_recover();
+        led_recover(1);
         k_work_reschedule(&factory_recover_work, K_MSEC(2800));
         state++;
     }
@@ -947,6 +949,7 @@ static void connected(struct bt_conn *conn, uint8_t err) {
     blue_led_set_state( LED_PEER_STATE_CONNECTED);
 
     profiles[active_profile].connected=1;
+    sec_ready = 0;
 
     LOG_DBG("Connected %s", addr);
     int ret = bt_conn_set_security(conn, BT_SECURITY_L2);
@@ -1008,7 +1011,8 @@ static void security_changed(struct bt_conn *conn, bt_security_t level, enum bt_
     if (!err) {
         LOG_DBG("Security changed: %s level %u", addr, level);
         if (level >= BT_SECURITY_L2) {
-            
+            sec_ready = 1;
+            hog_send_queue_data_on_connection();
             if (bt_addr_le_is_rpa(bt_conn_get_dst(conn))) {
                 profiles[active_profile].is_rpa = 1;
                 LOG_INF("host:%s is rpa", addr);

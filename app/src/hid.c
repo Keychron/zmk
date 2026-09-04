@@ -10,6 +10,7 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #include <zmk/hid.h>
 #include <dt-bindings/zmk/modifiers.h>
+#include <zmk/endpoints.h>
 
 static struct zmk_hid_keyboard_report keyboard_report = {
     .report_id = ZMK_HID_REPORT_ID_KEYBOARD, .body = {.modifiers = 0, ._reserved = 0, .keys = {0}}};
@@ -35,6 +36,20 @@ bool get_fn_win_lock(void);
 
 #define GET_MODIFIERS (keyboard_report.body.modifiers)
 
+#if CONFIG_ADAPATIVE_NKRO
+struct zmk_adapative_nkro adapative_nkro;
+// struct zmk_hid_keyboard_report nkro_24g_rpt;
+static ATOMIC_DEFINE(report_changed, 2);
+bool nkro_changed(void)
+{
+    return atomic_test_and_clear_bit(report_changed,NKRO_RPT);
+}
+bool kb_changed(void)
+{
+    return atomic_test_and_clear_bit(report_changed,KB_RPT);
+}
+#endif 
+
 zmk_mod_flags_t zmk_hid_get_explicit_mods() { return explicit_modifiers; }
 
 int zmk_hid_register_mod(zmk_mod_t modifier) {
@@ -50,7 +65,14 @@ int zmk_hid_register_mod(zmk_mod_t modifier) {
     WRITE_BIT(explicit_modifiers, modifier, true);
     zmk_mod_flags_t current = GET_MODIFIERS;
     SET_MODIFIERS(explicit_modifiers);
+#if CONFIG_ADAPATIVE_NKRO
+    int ret = current == GET_MODIFIERS ? 0 : 1;
+    if(ret)
+        atomic_set_bit(report_changed,KB_RPT);
+    return ret;
+#else       
     return current == GET_MODIFIERS ? 0 : 1;
+#endif     
 }
 
 int zmk_hid_unregister_mod(zmk_mod_t modifier) {
@@ -72,7 +94,14 @@ int zmk_hid_unregister_mod(zmk_mod_t modifier) {
     }
     zmk_mod_flags_t current = GET_MODIFIERS;
     SET_MODIFIERS(explicit_modifiers);
+#if CONFIG_ADAPATIVE_NKRO
+    int ret = current == GET_MODIFIERS ? 0 : 1;
+    if(ret)
+        atomic_set_bit(report_changed,KB_RPT);
+    return ret;
+#else       
     return current == GET_MODIFIERS ? 0 : 1;
+#endif     
 }
 
 bool zmk_hid_mod_is_pressed(zmk_mod_t modifier) {
@@ -100,7 +129,66 @@ int zmk_hid_unregister_mods(zmk_mod_flags_t modifiers) {
 
     return ret;
 }
-
+#if CONFIG_ADAPATIVE_NKRO
+static inline int TOGGLE_KEYBOARD_nkro(uint16_t code, uint16_t val,uint8_t nkro)
+{
+    
+    if(nkro)
+    {
+        if(val) {
+            adapative_nkro.nkro_bits_count ++;
+            atomic_set_bit(report_changed,NKRO_RPT);
+            adapative_nkro.nkro_report.body._reserved =1;
+            WRITE_BIT(adapative_nkro.nkro_report.body.keys[code / 8], code % 8, val);
+        }
+        else {
+            if(adapative_nkro.nkro_report.body.keys[code/8] & BIT(code%8)){
+                WRITE_BIT(adapative_nkro.nkro_report.body.keys[code / 8], code % 8, val);
+                adapative_nkro.nkro_bits_count --;
+                atomic_set_bit(report_changed,NKRO_RPT);
+                adapative_nkro.nkro_report.body._reserved =1;
+                return 1;
+            }
+        }
+        
+    }
+    else
+    {
+        for (int idx = 0; idx < CONFIG_ZMK_HID_KEYBOARD_REPORT_SIZE; idx++) 
+        {                          
+            if (keyboard_report.body.keys[idx] != code) {                                             
+                continue;                                                                              
+            }                                                                                          
+            keyboard_report.body.keys[idx] = val; 
+            
+            
+            if (val) {
+                adapative_nkro.kb_keys_count++;   
+                break;                                                                                 
+            }  
+            else
+            {
+                adapative_nkro.kb_keys_count--;
+            }                                                                                        
+        }
+    }
+    return 0;
+}
+// static inline int TOGGLE_KEYBOARD_nkro_24g(uint16_t code, uint16_t val)
+// {
+//     if(val) {
+//         WRITE_BIT(nkro_24g_rpt.body.keys[code / 8], code % 8, val);
+//         return 0;
+//     }
+//     else {
+//         if(nkro_24g_rpt.body.keys[code/8] & BIT(code%8)){
+//             WRITE_BIT(nkro_24g_rpt.body.keys[code / 8], code % 8, val);
+//             return 1;
+//         }
+//     }
+//     return 0;
+// }
+#endif 
 #if IS_ENABLED(CONFIG_ZMK_HID_REPORT_TYPE_NKRO)
 
 #define TOGGLE_KEYBOARD(code, val) WRITE_BIT(keyboard_report.body.keys[code / 8], code % 8, val)
@@ -142,22 +230,87 @@ static inline bool check_keyboard_usage(zmk_key_t usage) {
     }
 
 static inline int select_keyboard_usage(zmk_key_t usage) {
+#if CONFIG_ADAPATIVE_NKRO
+    // if(zmk_endpoints_selected().transport == ZMK_TRANSPORT_24G)
+    //     return TOGGLE_KEYBOARD_nkro_24g(usage,1);
+
+    if(adapative_nkro.kb_keys_count == CONFIG_ZMK_HID_KEYBOARD_REPORT_SIZE)
+    {
+        if (usage > ZMK_HID_KEYBOARD_NKRO_MAX_USAGE) {
+            return -EINVAL;
+        }
+        TOGGLE_KEYBOARD_nkro(usage, 1,1);
+    }
+    else
+    {
+        TOGGLE_KEYBOARD_nkro(0U, usage,0);
+        
+        atomic_set_bit(report_changed,KB_RPT);
+    }
+    LOG_ERR("kb keys:%d,%d",adapative_nkro.kb_keys_count,adapative_nkro.nkro_bits_count);
+#else    
     TOGGLE_KEYBOARD(0U, usage);
+#endif     
     return 0;
 }
 
 static inline int deselect_keyboard_usage(zmk_key_t usage) {
+#if CONFIG_ADAPATIVE_NKRO
+    // if(zmk_endpoints_selected().transport == ZMK_TRANSPORT_24G)
+    //     return TOGGLE_KEYBOARD_nkro_24g(usage,0);
+
+    if(adapative_nkro.nkro_bits_count)
+    {
+        if (usage > ZMK_HID_KEYBOARD_NKRO_MAX_USAGE) {
+            return -EINVAL;
+        }
+        if(TOGGLE_KEYBOARD_nkro(usage, 0,1)) return 0;
+
+    }
+
+    TOGGLE_KEYBOARD_nkro(usage, 0U,0);
+    atomic_set_bit(report_changed,KB_RPT);
+    LOG_ERR("kb keys:%d,%d",adapative_nkro.kb_keys_count,adapative_nkro.nkro_bits_count);
+#else
     TOGGLE_KEYBOARD(usage, 0U);
+#endif 
     return 0;
 }
 
 static inline int check_keyboard_usage(zmk_key_t usage) {
+#if CONFIG_ADAPATIVE_NKRO
+    // if(zmk_endpoints_selected().transport == ZMK_TRANSPORT_24G)
+    // {
+    //     if (usage > ZMK_HID_KEYBOARD_NKRO_MAX_USAGE) {
+    //         return false;
+    //     }
+    //      return nkro_24g_rpt.body.keys[usage/8] & (1<< (usage%8));
+    // }
+
+    if(adapative_nkro.nkro_bits_count)
+    {
+         if (usage > ZMK_HID_KEYBOARD_NKRO_MAX_USAGE) {
+            return false;
+        }
+        return adapative_nkro.nkro_report.body.keys[usage/8] & (1<< (usage%8));
+    }
+    else
+    {
+        for (int idx = 0; idx < CONFIG_ZMK_HID_KEYBOARD_REPORT_SIZE; idx++) {
+            if (keyboard_report.body.keys[idx] == usage) {
+                return true;
+            }
+        }
+        return false;
+    }
+#else       
     for (int idx = 0; idx < CONFIG_ZMK_HID_KEYBOARD_REPORT_SIZE; idx++) {
         if (keyboard_report.body.keys[idx] == usage) {
             return true;
         }
     }
     return false;
+#endif 
 }
 
 #else
@@ -228,7 +381,23 @@ bool zmk_hid_keyboard_is_pressed(zmk_key_t code) {
     return check_keyboard_usage(code);
 }
 
-void zmk_hid_keyboard_clear() { memset(&keyboard_report.body, 0, sizeof(keyboard_report.body)); }
+void zmk_hid_keyboard_clear() { 
+    memset(&keyboard_report.body, 0, sizeof(keyboard_report.body));
+#if CONFIG_ADAPATIVE_NKRO
+    memset(&adapative_nkro.nkro_report.body,0,sizeof(adapative_nkro.nkro_report.body));
+    // memset(&nkro_24g_rpt.body,0,sizeof(nkro_24g_rpt.body));
+    if(adapative_nkro.nkro_bits_count)
+    {
+        atomic_set_bit(report_changed,NKRO_RPT);
+        adapative_nkro.nkro_bits_count=0;
+    }
+    if(adapative_nkro.kb_keys_count)
+    {
+        atomic_set_bit(report_changed,KB_RPT);
+        adapative_nkro.kb_keys_count=0;
+    }
+#endif     
+}
 
 int zmk_hid_consumer_press(zmk_key_t code) {
     TOGGLE_CONSUMER(0U, code);

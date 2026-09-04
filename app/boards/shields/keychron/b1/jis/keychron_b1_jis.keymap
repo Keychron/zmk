@@ -56,19 +56,19 @@
     combos1 {
         compatible = "zmk,combos";
         combo_jz {
-            timeout-ms = <1000>;
+            timeout-ms = <500>;
             layers = <1 3>;
             key-positions = <49 57>; //fn+j+z
             bindings = <&long_press_recover 0 0>;
         };
         combo_xl {
-            timeout-ms = <1000>;
+            timeout-ms = <500>;
             layers =< 1 3>;
             key-positions = <58 51>; //fn+x+l
             bindings = <&long_press_change 0 0>;
         };
         combo_b {
-            timeout-ms = <1000>;
+            timeout-ms = <500>;
             layers =< 1 3>;
             //slow-release = <true>;
             key-positions = <61>; //fn+b
@@ -76,7 +76,7 @@
         };
 
         combo_win_l {
-            timeout-ms = <1000>;
+            timeout-ms = <500>;
             layers =< 1 3>;
             //slow-release = <true>;
             key-positions = <70>; //fn+win
@@ -236,7 +236,7 @@
         bindings = < 
                     //f1                    //f2                    //f3                                //f4                        //f5            //f6              //f7            //f8              //f9        //f10           //f11                         //f12          
         &trans  &kp C_BRIGHTNESS_DEC    &kp C_BRIGHTNESS_INC        &uc LG(TAB)                         &uc LG(E)               &kp C_AC_SEARCH     &uc LG(L)       &kp C_PREVIOUS  &kp C_PLAY_PAUSE    &kp C_NEXT  &kp C_MUTE  &kp C_VOLUME_DOWN           &kp C_VOLUME_UP      &trans
-        &trans  &bt_pair_0 0 0          &bt_pair_1 0 0              &bt_pair_2 0 0                      &bt_pair_3 0 0          &trans              &trans          &trans          &trans              &trans      &trans      &trans                      &kp C_AL_CALC        &trans     &trans
+        &trans  &bt_pair_0 0 0          &bt_pair_1 0 0              &bt_pair_2 0 0                      &bt_pair_3 0 0          &trans              &trans          &trans          &trans              &trans      &trans      &long_press_bootloader 0 0  &kp C_AL_CALC        &trans     &trans
         &trans  &trans                  &trans                      &trans                              &trans                  &trans              &trans          &trans          &kp INS             &trans      &trans      &trans                      &trans                     
         &trans  &trans                  &trans                      &trans                              &trans                  &trans              &trans          &trans          &trans              &trans      &trans      &trans                      &trans               &trans  
         &trans                          &trans                      &trans                              &trans                  &trans              &trans          &trans          &trans              &trans      &trans      &trans                      &trans               &uc LG(DOT) 

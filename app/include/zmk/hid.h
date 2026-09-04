@@ -13,7 +13,7 @@
 #include <dt-bindings/zmk/hid_usage.h>
 #include <dt-bindings/zmk/hid_usage_pages.h>
 
-#define ZMK_HID_KEYBOARD_NKRO_MAX_USAGE HID_USAGE_KEY_KEYPAD_EQUAL
+#define ZMK_HID_KEYBOARD_NKRO_MAX_USAGE HID_USAGE_KEY_KEYBOARD_F20//HID_USAGE_KEY_KEYPAD_EQUAL
 
 // See https://www.usb.org/sites/default/files/hid1_11.pdf section 6.2.2.4 Main Items
 
@@ -48,6 +48,9 @@
 #define ZMK_HID_REPORT_ID_CONSUMER 0x02
 #define ZMK_HID_REPORT_ID_SYSTEM   0x03
 #define ZMK_HID_REPORT_ID_MOUSE    0x04
+#if CONFIG_ADAPATIVE_NKRO
+#define ZMK_HID_REPORT_ID_KEYBOARD_NKRO 0x05
+#endif 
 
 #define HID_USAGE_2(a,b)        \
     HID_ITEM(HID_ITEM_TAG_USAGE, HID_ITEM_TYPE_LOCAL, 2), a,b 
@@ -108,8 +111,39 @@ static const uint8_t zmk_hid_report_desc[] = {
 #else
 #error "A proper HID report type must be selected"
 #endif
-
+    
     HID_END_COLLECTION,
+    
+#if CONFIG_ADAPATIVE_NKRO
+    HID_USAGE_PAGE(HID_USAGE_GEN_DESKTOP),
+    HID_USAGE(HID_USAGE_GD_KEYBOARD),
+    HID_COLLECTION(HID_COLLECTION_APPLICATION),
+    HID_REPORT_ID(ZMK_HID_REPORT_ID_KEYBOARD_NKRO),
+    HID_USAGE_PAGE(HID_USAGE_KEY),
+    HID_USAGE_MIN8(HID_USAGE_KEY_KEYBOARD_LEFTCONTROL),
+    HID_USAGE_MAX8(HID_USAGE_KEY_KEYBOARD_RIGHT_GUI),
+    HID_LOGICAL_MIN8(0x00),
+    HID_LOGICAL_MAX8(0x01),
+
+    HID_REPORT_SIZE(0x01),
+    HID_REPORT_COUNT(0x08),
+    HID_INPUT(ZMK_HID_MAIN_VAL_DATA | ZMK_HID_MAIN_VAL_VAR | ZMK_HID_MAIN_VAL_ABS),
+
+  
+    // HID_REPORT_SIZE(0x08),
+    // HID_REPORT_COUNT(0x01),
+    // HID_INPUT(ZMK_HID_MAIN_VAL_CONST | ZMK_HID_MAIN_VAL_VAR | ZMK_HID_MAIN_VAL_ABS),
+
+    HID_LOGICAL_MIN8(0x00),
+    HID_LOGICAL_MAX8(0x01),
+    HID_USAGE_MIN8(0x00),
+    HID_USAGE_MAX8(ZMK_HID_KEYBOARD_NKRO_MAX_USAGE),
+    HID_REPORT_SIZE(0x01),
+    HID_REPORT_COUNT(ZMK_HID_KEYBOARD_NKRO_MAX_USAGE + 1),
+    HID_INPUT(ZMK_HID_MAIN_VAL_DATA | ZMK_HID_MAIN_VAL_VAR | ZMK_HID_MAIN_VAL_ABS),
+    HID_END_COLLECTION,
+#endif 
+
     HID_USAGE_PAGE(HID_USAGE_CONSUMER),
     HID_USAGE(HID_USAGE_CONSUMER_CONSUMER_CONTROL),
     HID_COLLECTION(HID_COLLECTION_APPLICATION),
@@ -182,11 +216,15 @@ static const uint8_t zmk_hid_report_desc[] = {
 struct zmk_hid_keyboard_report_body {
     zmk_mod_flags_t modifiers;
     uint8_t _reserved;
+#if CONFIG_ADAPATIVE_NKRO
+    uint8_t keys[(ZMK_HID_KEYBOARD_NKRO_MAX_USAGE + 1) / 8];
+#else    
 #if IS_ENABLED(CONFIG_ZMK_HID_REPORT_TYPE_NKRO)
     uint8_t keys[(ZMK_HID_KEYBOARD_NKRO_MAX_USAGE + 1) / 8];
 #elif IS_ENABLED(CONFIG_ZMK_HID_REPORT_TYPE_HKRO)
     uint8_t keys[CONFIG_ZMK_HID_KEYBOARD_REPORT_SIZE];
 #endif
+#endif 
 } __packed;
 
 struct zmk_hid_keyboard_report {
@@ -194,6 +232,20 @@ struct zmk_hid_keyboard_report {
     struct zmk_hid_keyboard_report_body body;
 } __packed;
 
+#if CONFIG_ADAPATIVE_NKRO
+enum {
+    KB_RPT,
+    NKRO_RPT,
+};
+struct zmk_adapative_nkro {
+    // uint8_t kb_changed:1;
+    // uint8_t nkro_changed:1;
+    // uint8_t res:6;
+    uint8_t kb_keys_count;
+    uint8_t nkro_bits_count;
+    struct zmk_hid_keyboard_report nkro_report;
+} __packed; 
+#endif 
 struct zmk_hid_consumer_report_body {
 #if IS_ENABLED(CONFIG_ZMK_HID_CONSUMER_REPORT_USAGES_BASIC)
     uint8_t keys[CONFIG_ZMK_HID_CONSUMER_REPORT_SIZE];

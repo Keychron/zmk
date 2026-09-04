@@ -1,0 +1,17 @@
+# Copyright (c) 2024 Keychron
+# SPDX-License-Identifier: MIT
+
+config ADAPATIVE_NKRO
+   bool 
+
+config EN_FIX_CAPS_ALT_DEL
+    bool
+
+config SHIELD_KEYCHRON_B1
+    bool    
+
+config SHIELD_KEYCHRON_B1_US_N
+    def_bool $(shields_list_contains,keychron_b1_usn)
+    select SHIELD_KEYCHRON_B1
+    select ADAPATIVE_NKRO
+    select EN_FIX_CAPS_ALT_DEL

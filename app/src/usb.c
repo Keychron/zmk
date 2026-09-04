@@ -58,11 +58,14 @@ enum zmk_usb_conn_state zmk_usb_get_conn_state() {
 void usb_status_cb(enum usb_dc_status_code status, const uint8_t *params) {
     static uint8_t led_bak_state=0;
     usb_status = status;
-
+    // if (status == USB_DC_SOF) {
+    //     usb_sof_count++;
+    //     return;
+    // }
     switch(status)
     {
         case USB_DC_RESET:
-
+            // bt_24g_switch_reset();
             zmk_usb_set_protocol_report();
             led_bak_state =0;
             usb_sof_count=0;
@@ -83,7 +86,14 @@ void usb_status_cb(enum usb_dc_status_code status, const uint8_t *params) {
         }
         break;
     case USB_DC_DISCONNECTED:
-
+        // if(get_current_transport()==ZMK_TRANSPORT_BLE)
+        // {
+        //     bt_24g_switch_pulldown(0);
+        // }
+        // else if(get_current_transport()==ZMK_TRANSPORT_24G)
+        // {
+        //     bt_24g_switch_pulldown(1);
+        // }
         break;
     default:
         break;

@@ -1,0 +1,13 @@
+# Copyright (c) 2024 Keychron
+# SPDX-License-Identifier: NIT
+
+config ADAPATIVE_NKRO
+   bool 
+
+config EN_FIX_CAPS_ALT_DEL
+    bool
+
+config SHIELD_KEYCHRON_B6_JIS_N
+    def_bool $(shields_list_contains,keychron_b6_jisn)
+    select ADAPATIVE_NKRO
+    select EN_FIX_CAPS_ALT_DEL

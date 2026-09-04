@@ -13,7 +13,7 @@
 
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
+LOG_MODULE_DECLARE(zmk, 4);//CONFIG_ZMK_LOG_LEVEL);
 
 #include <zmk/event_manager.h>
 #include <zmk/battery.h>
@@ -77,6 +77,18 @@ static int zmk_battery_update(const struct device *battery) {
         bat_shutdown=false;
     }
     zmk_battery_check();
+
+    if(state_of_charge.val1==0)
+    {
+        if(voltage >BAT_VOLTAGE_LOW)
+        {
+            state_of_charge.val1=2;
+        }
+        else if(voltage >BAT_VOLTAGE_SHUTDOWN)
+        {
+            state_of_charge.val1 =1;
+        }
+    }
     
     LOG_DBG("bat,last per:%d,cur:%d",last_state_of_charge,state_of_charge.val1);
 

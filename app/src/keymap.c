@@ -331,100 +331,107 @@ ZMK_SUBSCRIPTION(keymap, zmk_position_state_changed);
 ZMK_SUBSCRIPTION(keymap, zmk_sensor_event);
 #endif /* ZMK_KEYMAP_HAS_SENSORS */
 
-
-void led_recover(void);
-
-static uint8_t fn_exchange_flag_mac;
-static uint8_t fn_exchange_flag_win;
-static uint8_t fn_exchange;
+#include "./launcher/launcher.h"
+void led_recover(uint8_t reboot);
+void dynamic_keymap_set_keycode(uint8_t layer, uint8_t row, uint8_t column, uint16_t keycode);
+// static uint8_t fn_exchange_flag_mac;
+// static uint8_t fn_exchange_flag_win;
+// static uint8_t fn_exchange;
 
 #define WIN_LAYER 2
 #define MAC_LAYER 0
+// uint8_t  via_fn_exchange_state(void);
+// void via_save_fn_exchange_state(uint8_t state);
+// static inline uint8_t get_fn_exchange_state(void)
+// {
+//     return via_fn_exchange_state();
+// }
+// static void save_fn_exchange_state(uint8_t state)
+// {
+//     fn_exchange =state;
 
-static inline uint8_t get_fn_exchange_state(void)
-{
-    return fn_exchange;
-}
-static void save_fn_exchange_state(uint8_t state)
-{
-    fn_exchange =state;
+//     settings_save_one("fn_exchange", &fn_exchange, sizeof(fn_exchange));
+// }
+// int load_immediate_value(const char *name, void *dest, size_t len);
+// void fn_exchange_setting_init(void)
+// {
 
-    settings_save_one("fn_exchange", &fn_exchange, sizeof(fn_exchange));
-}
-int load_immediate_value(const char *name, void *dest, size_t len);
-void fn_exchange_setting_init(void)
-{
+//     LOG_INF("settings init");
+//     settings_subsys_init();
 
-    LOG_INF("settings init");
-    settings_subsys_init();
+//     // int err = settings_register(&profiles_handler);
+//     // if (err) {
+//     //     LOG_ERR("Failed to setup the profile settings handler (err %d)", err);
+//     //     return ;
+//     // }
+//     // settings_load_subtree("ble/profiles");
+//     int rc;
+//     rc = load_immediate_value("fn_exchange", &fn_exchange, sizeof(fn_exchange));
+//     if (rc == -ENOENT) {
+//         fn_exchange = 0;
+//         LOG_DBG("fn_exchange:%d,default",fn_exchange);
+//     }
+//     else if(rc ==0)
+//     {
+//         LOG_DBG("fn_exchange:%d",fn_exchange);
+//     }
 
-    // int err = settings_register(&profiles_handler);
-    // if (err) {
-    //     LOG_ERR("Failed to setup the profile settings handler (err %d)", err);
-    //     return ;
-    // }
-    // settings_load_subtree("ble/profiles");
-    int rc;
-    rc = load_immediate_value("fn_exchange", &fn_exchange, sizeof(fn_exchange));
-    if (rc == -ENOENT) {
-        fn_exchange = 0;
-        LOG_DBG("fn_exchange:%d,default",fn_exchange);
-    }
-    else if(rc ==0)
-    {
-        LOG_DBG("fn_exchange:%d",fn_exchange);
-    }
-
-}
+// }
 bool keyboard_os_is_mac(void)
 {
     return ((_zmk_keymap_layer_state & BIT(MAC_LAYER))  || (_zmk_keymap_layer_state &BIT(MAC_LAYER+1)) || _zmk_keymap_layer_state==MAC_LAYER);
 }
-void f1_f13_fn_exchange_mac(void)
+uint32_t zmk_matrix_transform_position_to_row_column(uint32_t pos);
+void f1_f13_fn_exchange(uint8_t mac_win_layer)
 {
 #if CONFIG_SHIELD_KEYCHRON_B1    
-    struct zmk_behavior_binding  backup_bindings[12];
+    // struct zmk_behavior_binding  backup_bindings[12];
+    uint8_t max_exhange_pos =12;
 #else    
-    struct zmk_behavior_binding  backup_bindings[13];
+    // struct zmk_behavior_binding  backup_bindings[13];
+    uint8_t max_exhange_pos =13;
 #endif     
     LOG_DBG("cur lay_state:%x",_zmk_keymap_layer_state);
 
     {
         LOG_DBG("layer:mac");
-        memcpy(backup_bindings,&zmk_keymap[MAC_LAYER][1],sizeof(backup_bindings));
-        memcpy(&zmk_keymap[MAC_LAYER][1],&zmk_keymap[MAC_LAYER+1][1],sizeof(backup_bindings));
-        memcpy(&zmk_keymap[MAC_LAYER+1][1],backup_bindings,sizeof(backup_bindings));
+
+        for(int pos=1;pos<=max_exhange_pos;pos++)
+        {
+            uint32_t value =zmk_matrix_transform_position_to_row_column(pos);
+            uint8_t row = value /MATRIX_COLS;
+            uint8_t column = value % MATRIX_COLS;
+            uint8_t layer = mac_win_layer;
+            uint16_t backup_keycode = (via_ee_device.keymaps[layer * KEYMAP_LEN+row*MATRIX_COLS*2+ column*2]<<8) +via_ee_device.keymaps[layer * KEYMAP_LEN+row*MATRIX_COLS*2+ column*2+1];
+            layer +=1;
+            uint16_t keycode =(via_ee_device.keymaps[layer * KEYMAP_LEN+row*MATRIX_COLS*2+ column*2]<<8) +via_ee_device.keymaps[layer * KEYMAP_LEN+row*MATRIX_COLS*2+ column*2+1];
+            dynamic_keymap_set_keycode(mac_win_layer,row,column,keycode);
+            dynamic_keymap_set_keycode(mac_win_layer+1,row,column,backup_keycode);
+           
+        }
     }
   
 }
+void f1_f13_fn_exchange_mac(void)
+{
+    f1_f13_fn_exchange(MAC_LAYER);
+}
 void f1_f13_fn_exchange_win(void)
 {
-#if CONFIG_SHIELD_KEYCHRON_B1
-    struct zmk_behavior_binding  backup_bindings[12];
-#else   
-    struct zmk_behavior_binding  backup_bindings[13];
-#endif     
-    LOG_DBG("cur lay_state:%x",_zmk_keymap_layer_state);
-
-    {
-        LOG_DBG("layer:win");
-        memcpy(backup_bindings,&zmk_keymap[WIN_LAYER][1],sizeof(backup_bindings));
-        memcpy(&zmk_keymap[WIN_LAYER][1],&zmk_keymap[WIN_LAYER+1][1],sizeof(backup_bindings));
-        memcpy(&zmk_keymap[WIN_LAYER+1][1],backup_bindings,sizeof(backup_bindings));
-    }
+    f1_f13_fn_exchange(WIN_LAYER);
 }
-void f1_f13_fn_exchange_start_check(void)
-{
-    fn_exchange_setting_init();
-    uint8_t fn_exchange_flag=get_fn_exchange_state();
+// void f1_f13_fn_exchange_start_check(void)
+// {
+//     fn_exchange_setting_init();
+//     uint8_t fn_exchange_flag=get_fn_exchange_state();
 
-    fn_exchange_flag_mac=(fn_exchange_flag &0x02) ?0xff:0;
-    fn_exchange_flag_win=(fn_exchange_flag &0x01) ?0xff:0;
+//     fn_exchange_flag_mac=(fn_exchange_flag &0x02) ?0xff:0;
+//     fn_exchange_flag_win=(fn_exchange_flag &0x01) ?0xff:0;
 
-    LOG_DBG("mac:%d,win:%d",fn_exchange_flag_mac,fn_exchange_flag_win);
-    if(fn_exchange_flag_mac ) f1_f13_fn_exchange_mac();
-    if(fn_exchange_flag_win ) f1_f13_fn_exchange_win();
-}
+//     LOG_DBG("mac:%d,win:%d",fn_exchange_flag_mac,fn_exchange_flag_win);
+//     if(fn_exchange_flag_mac ) f1_f13_fn_exchange_mac();
+//     if(fn_exchange_flag_win ) f1_f13_fn_exchange_win();
+// }
 
 uint8_t keyboard_get_led_state(void);
 void keyboad_led_set_onoff(uint8_t led_state);
@@ -436,20 +443,23 @@ static void reset_led_work_cb(struct k_work *work)
 
 void do_f1_f13_fn_exchange(void)
 {
-    
+    // uint8_t fn_exchange_flag=get_fn_exchange_state();
+    // fn_exchange_flag_mac=(fn_exchange_flag &0x02) ?0xff:0;
+    // fn_exchange_flag_win=(fn_exchange_flag &0x01) ?0xff:0;
+
     if(keyboard_os_is_mac())
     {
         f1_f13_fn_exchange_mac();
-        fn_exchange_flag_mac = ~fn_exchange_flag_mac;
+        // fn_exchange_flag_mac = ~fn_exchange_flag_mac;
     }
     else
     {
         f1_f13_fn_exchange_win();
-        fn_exchange_flag_win = ~fn_exchange_flag_win;
+        // fn_exchange_flag_win = ~fn_exchange_flag_win;
     }
-    led_recover();
-    LOG_DBG("mac:%d,win:%d",fn_exchange_flag_mac,fn_exchange_flag_win);
-    save_fn_exchange_state((fn_exchange_flag_win?0x01:0) | (fn_exchange_flag_mac?0x02:0));
+    led_recover(0);
+    // LOG_DBG("mac:%d,win:%d",fn_exchange_flag_mac,fn_exchange_flag_win);
+    // via_save_fn_exchange_state((fn_exchange_flag_win?0x01:0) | (fn_exchange_flag_mac?0x02:0));
     k_work_init_delayable(&reset_led_work, reset_led_work_cb);
     k_work_reschedule(&reset_led_work, K_MSEC(2800));
 }

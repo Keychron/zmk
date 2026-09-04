@@ -63,3 +63,16 @@ int32_t zmk_matrix_transform_row_column_to_position(uint32_t row, uint32_t colum
     return matrix_index;
 #endif /* ZMK_KEYMAP_TRANSFORM_NODE */
 };
+
+
+uint32_t zmk_matrix_transform_position_to_row_column(uint32_t pos)
+{
+    for(int i=0;i<sizeof(transform);i++)
+    {
+        if(transform[i]==(pos+INDEX_OFFSET))
+        {
+            return i;
+        }
+    }
+    return 0xffff;
+}

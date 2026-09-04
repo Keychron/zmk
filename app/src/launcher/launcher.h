@@ -174,6 +174,7 @@ enum{
     UC_EMOJI_WIN,//LG(DOT),open emoji in win
     UC_PRNS_WIN,//LG(LS(S))
     UC_PRNS_MAC,//LG(LS(N4))
+    UC_BATINFO,//fn+b
     UC_KEYCHRON,//0x770100
 };
 
@@ -192,13 +193,13 @@ enum{
 #elif CONFIG_SHIELD_KEYCHRON_B2_JIS
 #define QMK_BUILDDATE "2024-05-08" 
 #elif CONFIG_SHIELD_KEYCHRON_B2_US
-#define QMK_BUILDDATE "2024-05-09" 
+#define QMK_BUILDDATE "2024-07-29" 
 #elif CONFIG_SHIELD_KEYCHRON_B2_UK
 #define QMK_BUILDDATE "2024-05-10"
 #elif CONFIG_SHIELD_KEYCHRON_B2_KR
 #define QMK_BUILDDATE "2024-08-21" 
 #else
-#define QMK_BUILDDATE "2024-05-27" 
+#define QMK_BUILDDATE "2025-08-22" 
 #endif 
 
 #define EECONFIG_SIZE 0
@@ -431,6 +432,8 @@ struct user_debounce{
     uint8_t scan_period_ms;
     uint8_t debounce_press_ms;
     uint8_t debounce_release_ms;
+    uint8_t win_lock:1;
+    uint8_t resrv:7;
 };
 
 void via_ee_read_all(void);
