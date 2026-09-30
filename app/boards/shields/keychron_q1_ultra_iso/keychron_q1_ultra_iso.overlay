@@ -1,0 +1,496 @@
+#include <dt-bindings/zmk/matrix_transform.h>
+#include <dt-bindings/led/led.h>
+#include <zephyr/dt-bindings/gpio/realtek-rtl87x2g-gpio.h>
+#include "led_strip_q1_ultra_iso.dtsi"
+
+&gpioa {
+    status = "okay";
+};
+&gpiob {
+    status = "okay";
+};
+&usb {
+    status = "okay";
+};
+// &timer2 {
+//     status = "okay";
+//     prescaler = <1>;
+//     pwm2: pwm2 {
+//         status = "disabled";// "okay";
+//         pinctrl-0 = <&pwm2_default>;
+//         pinctrl-names = "default";
+//     };
+// };
+// &timer3 {
+//     status = "okay";
+//     prescaler = <1>;
+//     pwm3: pwm3 {
+//         status =  "disabled";//"okay";
+//         pinctrl-0 = <&pwm3_default>;
+//         pinctrl-names = "default";
+//     };
+// };
+
+// &timer4 {
+//     status = "okay";
+//     prescaler = <1>;
+//     pwm4: pwm4 {
+//         // status =  "okay";
+//         status =  "disabled";
+//         pinctrl-0 = <&pwm4_default>;
+//         pinctrl-1 = <&pwm4_sleep>;
+//         pinctrl-names = "default","sleep";
+//     };
+// };
+&timer2 {
+    status = "okay";
+    prescaler = <1>;
+};
+&timer3 {
+    status = "okay";
+    prescaler = <1>;
+};
+&timer8 {
+    status = "okay";
+};
+
+&timer9 {
+    status = "okay";
+};
+
+&corewdt {
+    status = "okay";
+	// status = "okay";
+    initial-timeout-ms = <5000>;
+};
+&aonwdt {
+    status = "disabled";
+    // status = "disabled";
+    initial-timeout-ms = <5000>;
+};
+/ {
+	aliases {
+        watchdog = &corewdt;
+		// watchdog = &corewdt;
+	};
+    
+};
+
+&adc {
+    pinctrl-0 = <&adc_default>;
+    pinctrl-1 = <&adc_sleep>;
+    pinctrl-names = "default","sleep";
+    #address-cells = <1>;
+    #size-cells = <0>;
+    status = "okay";
+    is-bypass-mode=<4>;
+    channel@2 {
+        reg = <2>;
+        zephyr,gain = "ADC_GAIN_1";
+        zephyr,reference = "ADC_REF_INTERNAL";
+        zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+        zephyr,resolution = <12>;
+    };
+};	
+/ {
+    chosen {
+        // zmk,kscan = &kscan;
+        zmk,kscan = &kscan_comp;
+        zmk,matrix-transform = &default_transform;
+        zmk,battery = &vbatt;
+        //zmk,backlight = &backlight;
+    };
+    kscan_comp: kscan {
+        compatible = "zmk,kscan-composite";
+        rows = <7>;
+        columns = <15>;
+        // Include the direct GPIO driver...
+        // make sure direct init first!
+        direct {
+            kscan = <&kscan1>;
+            row-offset = <6>; // ...and shift it to not overlap
+        };
+        // Include the matrix driver
+        matrix {
+            kscan = <&kscan0>;
+            // kscan = <&kscan>;
+        };
+
+
+        // status = "disabled";
+    };
+    kscan0: kscan_matrix {
+        compatible = "zmk,kscan-gpio-matrix";
+
+        diode-direction = "row2col";
+        debounce-scan-period-ms =<1>;
+        debounce-press-ms =<0>;
+        debounce-release-ms=<50>;
+ 
+        row-gpios
+            = <&gpioa 13 (GPIO_ACTIVE_HIGH |GPIO_PULL_UP )>    //r0 P1_5
+            , <&gpioa 15 (GPIO_ACTIVE_HIGH |GPIO_PULL_UP)>    //r1 P1_7
+            , <&gpioa  4 (GPIO_ACTIVE_HIGH |GPIO_PULL_UP)>    //r2 P0_4
+            , <&gpioa  0 (GPIO_ACTIVE_HIGH |GPIO_PULL_UP)>    //r3 P0_0
+            , <&gpioa  2 (GPIO_ACTIVE_HIGH |GPIO_PULL_UP)>    //r4 P0_2
+            , <&gpioa  1 (GPIO_ACTIVE_HIGH |GPIO_PULL_UP)>   //r5 P0_1
+            ;
+        col-gpios
+            =   <&gpiob 0  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c1 P3_3      
+            , <&gpioa 17  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c2 32K_XI   
+            , <&gpiob 29  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c3 P10_0   
+            , <&gpiob 28  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c4 P9_7
+            , <&gpiob 27  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c5 P9_6
+            , <&gpiob 26  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c6 P9_5
+            , <&gpiob 25  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c7 P9_4
+            , <&gpiob 24  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c8 P9_3
+            , <&gpiob  6  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c9 P4_1
+            , <&gpiob 20  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c10 P6_1
+            , <&gpiob 21  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c11 P6_2
+            , <&gpiob 22  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c12 P6_3
+            , <&gpiob 23  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c13 P6_4
+            , <&gpiob 4  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c14 P3_7
+            , <&gpiob 3  (GPIO_ACTIVE_HIGH|GPIO_PULL_DOWN)>  //c15 P3_6
+            
+            ;
+        pinctrl-0 = <&gpio_default>;
+        pinctrl-1 = <&gpio_sleep>;
+        pinctrl-names = "default","sleep";
+
+        // status ="disabled";
+    };
+    kscan1:kscan_direct {
+        compatible = "zmk,kscan-gpio-direct";
+        input-gpios
+        = <&gpioa 31  (GPIO_ACTIVE_LOW )>  //mac/win   //P3_2  26
+        , <&gpioa  9  (GPIO_ACTIVE_LOW )>  //bt        //p1_1   9
+        , <&gpioa  8  (GPIO_ACTIVE_LOW )>  //24g       //p1_0   8
+        , <&gpioa 24  (GPIO_ACTIVE_LOW )>  //usb det   //P2_3   19
+        , <&gpioa 18  (GPIO_ACTIVE_LOW )>    //charging  //32k_xo  66
+        ;
+        // toggle-mode;
+        debounce-scan-period-ms=<20>;
+        debounce-release-ms=<20>;
+        pinctrl-0 = <&gpio_direct_default>;
+        pinctrl-1 = <&gpio_direct_sleep>;
+        pinctrl-names = "default","sleep";
+    };
+    // mode_monitor: mode_monitor {
+    //     compatible = "zmk,mode-monitor-pin";
+    //     ble-gpios = <&gpioa 9 (GPIO_ACTIVE_HIGH )>;
+    //     ppt-gpios = <&gpioa 8 (GPIO_ACTIVE_HIGH )>;
+    //     detect-usb-gpios = <&gpioa 24 (GPIO_ACTIVE_HIGH )>;
+    //     win2mac-gpios = <&gpioa 31 (GPIO_ACTIVE_HIGH )>;
+    // };
+    vbatt: vbatt {
+        compatible = "zmk,battery-voltage-divider";
+        io-channels = <&adc 2>;
+        output-ohms = <220000>;
+        full-ohms = <(1000000 + 220000)>;
+    };
+
+
+    // led_rgb:led_rgb  {
+    //     compatible = "pwm-leds";
+    //     status =  "disabled";//"okay";
+    //     pwm_led_0 {
+    //         pwms = <&pwm2 0 10000 PWM_POLARITY_INVERTED>;
+    //     };
+    //     pwm_led_1 {
+    //         pwms = <&pwm3 0 10000 PWM_POLARITY_INVERTED>;
+    //     };
+    //     pwm_led_2 {
+    //         pwms = <&pwm4 0 10000 PWM_POLARITY_INVERTED>;
+    //     };
+    // };
+
+    led_red: led_red{
+        compatible = "gpio-leds";
+        status ="okay";
+        pwr-gpios {
+            gpios= <&gpioa 25 GPIO_ACTIVE_HIGH>;  //chgled p2_4
+        };
+        
+    };
+
+    gpio_ctrls {
+        compatible = "gpio-leds";
+        usb_det:usb_det {
+            gpios= <&gpioa 24 GPIO_ACTIVE_LOW>;  //p2_3
+        };
+        debug_io:debug_io {
+            gpios= <&gpioa 28 GPIO_ACTIVE_LOW>;  //p2_7
+        };
+    };
+    
+	ppt: ppt {
+		compatible = "zmk,ppt-node";
+		enh-timers = <&timer8 &timer9>;
+		status = "okay";
+	};
+
+    default_transform: matrix_transform {
+        compatible = "zmk,matrix-transform";
+        rows = <7>;
+        columns = <15>;
+        map = <
+            //esc        //f1        //f2       //f3          //f4       //f5       //f6        //f7        //f8        //f9        //f10       //f11       //f12       //del           //enc
+            RC(0,0)     RC(0,1)     RC(0,2)     RC(0,3)    RC(0,4)     RC(0,5)     RC(0,6)     RC(0,7)     RC(0,8)     RC(0,9)    RC(0,10)      RC(0,11)    RC(0,12)    RC(0,13)       RC(0,14)  
+             //grave      //1        //2         //3       //4         //5         //6         //7         //8         //9         //0           //-          //+=       //back         //pgup
+            RC(1,0)     RC(1,1)     RC(1,2)     RC(1,3)    RC(1,4)     RC(1,5)     RC(1,6)     RC(1,7)     RC(1,8)     RC(1,9)     RC(1,10)     RC(1,11)     RC(1,12)   RC(1,13)       RC(1,14) 
+            //tab        //q         //w        //e         //r         // t         //y        //u         //i         //o         //p          //[          //]        //'\'          //pgdn
+            RC(2,0)     RC(2,1)     RC(2,2)     RC(2,3)    RC(2,4)     RC(2,5)     RC(2,6)     RC(2,7)     RC(2,8)     RC(2,9)     RC(2,10)     RC(2,11)     RC(2,12)   RC(2,13)       RC(2,14)
+            //cap        //a         //s         //d        //f         //g         //h          //j        //k         //l         // ;         //' "        //enter    //home
+            RC(3,0)     RC(3,1)     RC(3,2)     RC(3,3)    RC(3,4)     RC(3,5)     RC(3,6)     RC(3,7)     RC(3,8)     RC(3,9)     RC(3,10)     RC(3,11)      RC(3,12)  RC(3,13)
+             //lshit                 //z         //x         //c        //v         //b        //n         //m          //,<         //.>        //?/                    //rshit         //up
+            RC(4,0)     RC(4,1)     RC(4,2)     RC(4,3)    RC(4,4)     RC(4,5)     RC(4,6)     RC(4,7)     RC(4,8)     RC(4,9)     RC(4,10)     RC(4,11)                RC(4,13)        RC(4,14)
+            //lctrl     //win l      //alt l                                        //space                             //alt r       //fn        /ctrl      //left      //down         //right    
+            RC(5,0)     RC(5,1)     RC(5,2)                                        RC(5,6)                             RC(5,9)      RC(5,10)    RC(5,11)    RC(5,12)    RC(5,13)        RC(5,14) 
+            //m/w       //bt        //24g       //usb       //ch          
+            RC(6,0)     RC(6,1)     RC(6,2)     RC(6,3)     RC(6,4)     
+        >;
+    };
+
+
+    sensors: sensors {
+        compatible = "zmk,keymap-sensors";
+        status = "okay";
+        sensors = <&aon_qdec>;
+        triggers-per-rotation = <10>;
+    };
+ };
+
+&kscan {
+    pinctrl-0 = <&kscan_default>;
+    pinctrl-1 = <&kscan_sleep>;
+    pinctrl-names = "default", "sleep";
+    row-size = <6>;
+    col-size = <16>;
+    debounce-time-us = <0>;
+    scan-time-us =  <0>;
+    release-time-us = <10000>;
+    scan-debounce-cnt = <1>;
+    status = "disabled";
+    // status = "okay";
+};
+
+&pinctrl {
+    adc_default: adc_default {
+        group1 {
+             psels = <RTL87X2G_PSEL(SW_MODE, P2_2, DIR_IN, DRV_LOW, PULL_NONE)>;
+        };
+    };
+
+    adc_sleep: adc_sleep {
+        group1 {
+             psels = <RTL87X2G_PSEL(SW_MODE, P2_2, DIR_IN, DRV_LOW, PULL_DOWN)>;
+        };
+    };
+    kscan_default: kscan_default {
+        group1 {
+            psels = 
+            <RTL87X2G_PSEL(KEY_COL_0, P9_3, DIR_OUT, DRV_LOW, PULL_NONE)>,
+            <RTL87X2G_PSEL(KEY_COL_1, P9_4, DIR_OUT, DRV_LOW, PULL_NONE)>,
+			<RTL87X2G_PSEL(KEY_COL_2, P9_5, DIR_OUT, DRV_LOW, PULL_NONE)>,
+			<RTL87X2G_PSEL(KEY_COL_3, P9_6, DIR_OUT, DRV_LOW, PULL_NONE)>,
+			<RTL87X2G_PSEL(KEY_COL_4, P9_7, DIR_OUT, DRV_LOW, PULL_NONE)>,
+			<RTL87X2G_PSEL(KEY_COL_5, P10_0, DIR_OUT, DRV_LOW, PULL_NONE)>,
+			<RTL87X2G_PSEL(KEY_COL_6, P3_7, DIR_OUT, DRV_LOW, PULL_NONE)>,
+			<RTL87X2G_PSEL(KEY_COL_7, P3_6, DIR_OUT, DRV_LOW, PULL_NONE)>,
+			<RTL87X2G_PSEL(KEY_COL_8, P3_5, DIR_OUT, DRV_LOW, PULL_NONE)>,
+			<RTL87X2G_PSEL(KEY_COL_9, P3_4, DIR_OUT, DRV_LOW, PULL_NONE)>,
+			<RTL87X2G_PSEL(KEY_COL_10, P3_3, DIR_OUT, DRV_LOW, PULL_NONE)>,
+			<RTL87X2G_PSEL(KEY_COL_11, P4_1, DIR_OUT, DRV_LOW, PULL_NONE)>,
+			<RTL87X2G_PSEL(KEY_COL_12, P6_4, DIR_OUT, DRV_LOW, PULL_NONE)>,
+			<RTL87X2G_PSEL(KEY_COL_13, P6_3, DIR_OUT, DRV_LOW, PULL_NONE)>,
+			<RTL87X2G_PSEL(KEY_COL_14, P6_2, DIR_OUT, DRV_LOW, PULL_NONE)>,
+			<RTL87X2G_PSEL(KEY_COL_15, P6_1, DIR_OUT, DRV_LOW, PULL_NONE)>;
+
+        };
+        group2 {
+            psels =							
+            <RTL87X2G_PSEL(KEY_ROW_0, P1_5, DIR_IN, DRV_LOW, PULL_UP)>,
+            <RTL87X2G_PSEL(KEY_ROW_1, P1_7, DIR_IN, DRV_LOW, PULL_UP)>,
+            <RTL87X2G_PSEL(KEY_ROW_2, P0_0, DIR_IN, DRV_LOW, PULL_UP)>,
+            <RTL87X2G_PSEL(KEY_ROW_3, P0_1, DIR_IN, DRV_LOW, PULL_UP)>,			
+            <RTL87X2G_PSEL(KEY_ROW_4, P0_2, DIR_IN, DRV_LOW, PULL_UP)>,
+            <RTL87X2G_PSEL(KEY_ROW_5, P0_4, DIR_IN, DRV_LOW, PULL_UP)>;
+ 
+            bias-pull-strong;
+        };
+
+	};
+    kscan_sleep: kscan_sleep {
+        group1 {
+            psels =
+            <RTL87X2G_PSEL(SW_MODE, P9_3, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P9_4, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P9_5, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P9_6, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P9_7, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P10_0, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P3_7, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P3_6, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P3_5, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P3_4, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P3_3, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P4_1, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P6_4, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P6_3, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P6_2, DIR_OUT, DRV_LOW, PULL_DOWN)>,
+            <RTL87X2G_PSEL(SW_MODE, P6_1, DIR_OUT, DRV_LOW, PULL_DOWN)>;
+  
+        };
+        group2 {
+            psels =
+            <RTL87X2G_PSEL(SW_MODE, P1_5, DIR_IN, DRV_HIGH, PULL_UP)>,
+            <RTL87X2G_PSEL(SW_MODE, P1_7, DIR_IN, DRV_HIGH, PULL_UP)>,
+            <RTL87X2G_PSEL(SW_MODE, P0_0, DIR_IN, DRV_HIGH, PULL_UP)>,
+            <RTL87X2G_PSEL(SW_MODE, P0_1, DIR_IN, DRV_HIGH, PULL_UP)>,
+            <RTL87X2G_PSEL(SW_MODE, P0_2, DIR_IN, DRV_HIGH, PULL_UP)>,
+            <RTL87X2G_PSEL(SW_MODE, P0_4, DIR_IN, DRV_HIGH, PULL_UP)>;
+        
+            bias-pull-strong;
+            wakeup-low;
+        };
+    };
+    pwm2_default: pwm2_default {
+        group1 {
+            psels = <RTL87X2G_PSEL(TIMER_PWM2, P2_4,DIR_OUT, DRV_LOW, PULL_DOWN)>;
+        };
+    };
+    pwm3_default: pwm3_default {
+        group1 {
+            psels = <RTL87X2G_PSEL(TIMER_PWM3, P2_3,DIR_OUT, DRV_LOW, PULL_DOWN)>;
+        };
+    };
+    pwm4_default: pwm4_default {
+        group1 {
+            psels = <RTL87X2G_PSEL(TIMER_PWM4, P2_4,DIR_OUT, DRV_LOW, PULL_DOWN)>;
+        };
+    };
+    pwm4_sleep: pwm4_sleep {
+        group1 {
+            psels = <RTL87X2G_PSEL(SW_MODE, P2_4,DIR_IN, DRV_LOW, PULL_DOWN)>;
+        };
+    };
+    uart2_default: uart2_default {
+        group1 {
+            psels = <RTL87X2G_PSEL(UART2_TX, P3_0, DIR_OUT, DRV_HIGH, PULL_UP)>,
+            <RTL87X2G_PSEL(UART2_RX, P3_1, DIR_IN, DRV_HIGH, PULL_UP)>;
+        };
+    };
+    uart2_sleep: uart2_sleep {
+        group1 {
+            psels = <RTL87X2G_PSEL(SW_MODE, P3_0, DIR_IN, DRV_HIGH, PULL_UP)>,
+            <RTL87X2G_PSEL(SW_MODE, P3_1, DIR_IN, DRV_HIGH, PULL_UP)>;
+        };
+    };
+    gpio_default: gpio_default {
+        group1 {
+            psels = 
+             <RTL87X2G_PSEL(DWGPIO, P1_5, DIR_OUT, DRV_HIGH, PULL_UP)>,
+             <RTL87X2G_PSEL(DWGPIO, P1_7, DIR_OUT, DRV_HIGH, PULL_UP)>,
+             <RTL87X2G_PSEL(DWGPIO, P0_4, DIR_OUT, DRV_HIGH, PULL_UP)>,
+             <RTL87X2G_PSEL(DWGPIO, P0_0, DIR_OUT, DRV_HIGH, PULL_UP)>,
+             <RTL87X2G_PSEL(DWGPIO, P0_2, DIR_OUT, DRV_HIGH, PULL_UP)>,
+             <RTL87X2G_PSEL(DWGPIO, P0_1, DIR_OUT, DRV_HIGH, PULL_UP)>;
+             bias-pull-strong;
+        };
+        group2 {
+            psels = 
+             <RTL87X2G_PSEL(DWGPIO, P3_3, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(DWGPIO, XI32K, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(DWGPIO, P10_0, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(DWGPIO, P9_7, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(DWGPIO, P9_6, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(DWGPIO, P9_5, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(DWGPIO, P9_4, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(DWGPIO, P9_3, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(DWGPIO, P4_1, DIR_IN, DRV_LOW, PULL_DOWN)>, 
+             <RTL87X2G_PSEL(DWGPIO, P6_1, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(DWGPIO, P6_2, DIR_IN, DRV_LOW, PULL_DOWN)>, 
+             <RTL87X2G_PSEL(DWGPIO, P6_3, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(DWGPIO, P6_4, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(DWGPIO, P3_7, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(DWGPIO, P3_6, DIR_IN, DRV_LOW, PULL_DOWN)>; 
+             bias-pull-strong;
+        };
+    };
+    gpio_sleep: gpio_sleep {
+        group1 {
+            psels = 
+             <RTL87X2G_PSEL(SW_MODE, P1_5, DIR_OUT, DRV_HIGH, PULL_UP)>,
+             <RTL87X2G_PSEL(SW_MODE, P1_7, DIR_OUT, DRV_HIGH, PULL_UP)>,
+             <RTL87X2G_PSEL(SW_MODE, P0_4, DIR_OUT, DRV_HIGH, PULL_UP)>,
+             <RTL87X2G_PSEL(SW_MODE, P0_0, DIR_OUT, DRV_HIGH, PULL_UP)>,
+             <RTL87X2G_PSEL(SW_MODE, P0_2, DIR_OUT, DRV_HIGH, PULL_UP)>,
+             <RTL87X2G_PSEL(SW_MODE, P0_1, DIR_OUT, DRV_HIGH, PULL_UP)>;
+        };
+        group2 {
+            psels = 
+             <RTL87X2G_PSEL(SW_MODE, P3_3, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(SW_MODE, XI32K, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(SW_MODE, P10_0, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(SW_MODE, P9_7, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(SW_MODE, P9_6, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(SW_MODE, P9_5, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(SW_MODE, P9_4, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(SW_MODE, P9_3, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(SW_MODE, P4_1, DIR_IN, DRV_LOW, PULL_DOWN)>, 
+             <RTL87X2G_PSEL(SW_MODE, P6_1, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(SW_MODE, P6_2, DIR_IN, DRV_LOW, PULL_DOWN)>, 
+             <RTL87X2G_PSEL(SW_MODE, P6_3, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(SW_MODE, P6_4, DIR_IN, DRV_LOW, PULL_DOWN)>, 
+             <RTL87X2G_PSEL(SW_MODE, P3_7, DIR_IN, DRV_LOW, PULL_DOWN)>,
+             <RTL87X2G_PSEL(SW_MODE, P3_6, DIR_IN, DRV_LOW, PULL_DOWN)>;
+             wakeup-high;
+        };
+    };
+    qdec_default: qdec_default {
+        group1 {
+            psels = <RTL87X2G_PSEL(QDPH0_IN_P9_0_P9_1, P9_0, DIR_IN, DRV_LOW, PULL_UP)>,
+             <RTL87X2G_PSEL(QDPH0_IN_P9_0_P9_1, P9_1, DIR_IN, DRV_LOW, PULL_UP)>;
+             wakeup-low;
+        };
+    };
+    qdec_sleep: qdec_sleep {
+        group1 {
+            psels = <RTL87X2G_PSEL(SW_MODE, P9_0, DIR_IN, DRV_HIGH, PULL_NONE)>,
+             <RTL87X2G_PSEL(SW_MODE, P9_1, DIR_IN, DRV_HIGH, PULL_NONE)>;
+
+        };
+    };
+    gpio_direct_default:gpio_direct_default{
+        group1 {
+            psels = <RTL87X2G_PSEL(DWGPIO, P3_2, DIR_IN, DRV_HIGH, PULL_NONE)>,  
+             <RTL87X2G_PSEL(DWGPIO, P1_1, DIR_IN, DRV_HIGH, PULL_NONE)>,
+             <RTL87X2G_PSEL(DWGPIO, P1_0, DIR_IN, DRV_HIGH, PULL_NONE)>,          
+             <RTL87X2G_PSEL(DWGPIO, P2_3, DIR_IN, DRV_HIGH, PULL_NONE)>,
+             <RTL87X2G_PSEL(DWGPIO, XO32K, DIR_IN, DRV_HIGH, PULL_UP)>;//charge pin leak current ,has to pull up！
+        };
+    };
+    gpio_direct_sleep:gpio_direct_sleep{
+        group1 {
+            psels = <RTL87X2G_PSEL(SW_MODE, P3_2, DIR_IN, DRV_HIGH, PULL_NONE)>,
+             <RTL87X2G_PSEL(SW_MODE, P1_1, DIR_IN, DRV_HIGH, PULL_NONE)>,
+             <RTL87X2G_PSEL(SW_MODE, P1_0, DIR_IN, DRV_HIGH, PULL_NONE)>,
+             <RTL87X2G_PSEL(SW_MODE, P2_3, DIR_IN, DRV_HIGH, PULL_NONE)>,
+             <RTL87X2G_PSEL(SW_MODE, XO32K, DIR_IN, DRV_HIGH, PULL_UP)>;//charge pin leak current ,has to pull up！
+            //  bias-pull-strong;
+        };
+    };
+};
+
+&aon_qdec {
+    status = "okay";
+    // status = "disabled";
+    pinctrl-0 = <&qdec_default>;
+    pinctrl-1 = <&qdec_sleep>;
+    pinctrl-names = "default","sleep";
+    counts-per-revolution =<4>;
+};
+
+// &uart2 {
+// 	status = "disabled";
+// };

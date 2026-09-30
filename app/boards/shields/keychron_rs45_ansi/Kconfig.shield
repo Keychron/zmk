@@ -1,0 +1,15 @@
+# Copyright (c) 2024
+# SPDX-License-Identifier: MIT
+
+config SHIELD_KEYCHRON_RS45_ANSI
+    def_bool $(shields_list_contains,keychron_rs45_ansi)
+    select SHIELD_KEYCHRON_V1MAX    
+    select ENABLE_WIN_LOCK
+    select ENABLE_WIN_LOCK_INDICATOR
+    select ENABLE_NKRO_LED_FLASH
+    select KEYCHRON_RGB_ENABLE
+    select SNAP_CLICK_ENABLE
+    select RETAIL_DEMO_ENABLE
+    select ENABLE_FLASH_PROTECT
+
+

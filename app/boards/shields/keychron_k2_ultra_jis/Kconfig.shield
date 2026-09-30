@@ -1,0 +1,20 @@
+# Copyright (c) 2024
+# SPDX-License-Identifier: MIT
+
+config SHIELD_KEYCHRON_K2_ULTRA_JIS
+    def_bool $(shields_list_contains,keychron_k2_ultra_jis)
+    select SHIELD_KEYCHRON_V1MAX  
+    select KEYCHRON_RGB_ENABLE
+    select SNAP_CLICK_ENABLE
+    select RETAIL_DEMO_ENABLE
+    select ADAPATIVE_NKRO
+    select MAC_VIA_FUNC
+    # select FAST_KSCAN
+    select ADD_PPT_REPORT_RATE
+    select ENABLE_GPIO_LED
+    # select ENABLE_WIN_LOCK
+    # select ENABLE_WIN_LOCK_INDICATOR
+    select DEFAULT_1K_REPORT_RATE
+    select ENABLE_FLASH_PROTECT
+
+

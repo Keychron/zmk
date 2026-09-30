@@ -1,0 +1,18 @@
+# Copyright (c) 2024
+# SPDX-License-Identifier: MIT
+
+config SHIELD_KEYCHRON_Q3_ULTRA_ISO
+    def_bool $(shields_list_contains,keychron_q3_ultra_iso)
+    select SHIELD_KEYCHRON_V1MAX  
+    select KEYCHRON_RGB_ENABLE
+    select SNAP_CLICK_ENABLE
+    select RETAIL_DEMO_ENABLE
+    select ADAPATIVE_NKRO
+    select MAC_VIA_FUNC
+    # select FAST_KSCAN
+    select ADD_PPT_REPORT_RATE
+    select ENABLE_GPIO_LED
+    select ENABLE_FLASH_PROTECT
+    select DEFAULT_1K_REPORT_RATE
+
+
