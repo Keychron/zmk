@@ -176,14 +176,14 @@ uint8_t mod_to_zmk(uint8_t mod)
         return mod ;
     }
 }
-uint8_t mod_to_zmk_keycode(uint8_t mod_5bits)
+uint32_t mod_to_zmk_keycode(uint8_t mod_5bits)
 {
     uint8_t mod=mod_to_zmk(mod_5bits);
     for(int i=0;i<8;i++)
     {
         if(mod &(1<<i))
         {
-            return LCTRL +i;
+            return ((uint32_t)(mod & ~(1u<<i))<<24) | (LCTRL +i);
         }
     }
     return 0;
