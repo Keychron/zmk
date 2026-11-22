@@ -2039,6 +2039,7 @@ enum {
     kc_user_cmd_set_sleep_time = 0x0c,
     kc_user_cmd_report_rate = 0x0d,
     kc_user_cmd_set_report_rate = 0x0e,
+    kc_user_cmd_battery = 0x31,
 };
 /*
 write : cmd data
@@ -2174,6 +2175,15 @@ void kc_user_cmd(uint8_t *command_data) {
             set_lpm_set(idle_time, sleep_time);
         }
     } break;
+#if IS_ENABLED(CONFIG_ZMK_BATTERY_REPORTING)
+    // Reply: A7 31 <percent> <charging>, over USB and over the 2.4 GHz receiver.
+    case kc_user_cmd_battery: {
+        uint8_t zmk_battery_state_of_charge(void);
+        uint8_t get_charge_state(void);
+        command_data[1] = zmk_battery_state_of_charge();
+        command_data[2] = get_charge_state();
+    } break;
+#endif
     }
 }
 uint8_t get_report_rate_div(void) { return debounce.div; }
