@@ -14,3 +14,6 @@ int zmk_usb_hid_send_consumer_report(void);
 int zmk_usb_hid_send_mouse_report(void);
 #endif // IS_ENABLED(CONFIG_ZMK_MOUSE)
 void zmk_usb_hid_set_protocol(uint8_t protocol);
+#include <stdbool.h>
+/* True when the host (or the 2.4G dongle's host) selected HID boot protocol. */
+bool zmk_usb_hid_is_boot_protocol(void);

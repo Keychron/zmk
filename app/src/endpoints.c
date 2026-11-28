@@ -180,6 +180,23 @@ int transport_send(struct zmk_hid_keyboard_report *report, uint8_t len) {
 static int send_keyboard_report(void) {
     extern struct zmk_adapative_nkro adapative_nkro;
     int ret = 0;
+    if (zmk_usb_hid_is_boot_protocol()) {
+        /* The host only understands 8-byte boot reports without report IDs, so it must not
+         * get the report-ID-prefixed 6KRO report or the NKRO bitmap report. */
+        bool changed = kb_changed();
+        changed |= nkro_changed();
+        if (!changed) {
+            return 0;
+        }
+        if (current_instance.transport == ZMK_TRANSPORT_USB) {
+            return zmk_usb_hid_send_keyboard_report();
+        }
+        /* Over 2.4G the 6KRO body is already in boot layout; only drop the NKRO report. */
+        struct zmk_hid_keyboard_report *report = zmk_hid_get_keyboard_report();
+        report->report_id = ZMK_HID_REPORT_ID_KEYBOARD;
+        report->body._reserved = 0;
+        return transport_send(report, CONFIG_ZMK_HID_KEYBOARD_REPORT_SIZE + 3);
+    }
     if (kb_changed()) {
         struct zmk_hid_keyboard_report *report = zmk_hid_get_keyboard_report();
         report->report_id = ZMK_HID_REPORT_ID_KEYBOARD;

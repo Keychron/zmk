@@ -207,7 +207,8 @@ zmk_hid_boot_report_t *zmk_hid_get_boot_report(void) {
         return boot_report_rollover(keyboard_report.body.modifiers);
     }
     boot_report.modifiers = keyboard_report.body.modifiers;
-    if (!zmk_nkro_enable) {
+    /* With adaptive NKRO keyboard_report always holds the 6-key array, NKRO or not. */
+    if (IS_ENABLED(CONFIG_ADAPATIVE_NKRO) || !zmk_nkro_enable) {
 #if CONFIG_ZMK_HID_KEYBOARD_REPORT_SIZE != HID_BOOT_KEY_LEN
         // Form a boot report from a report of different size.
         int out = 0;

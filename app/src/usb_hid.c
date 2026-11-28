@@ -46,11 +46,21 @@ static void set_proto_cb(const struct device *dev, uint8_t protocol) {
 void zmk_usb_hid_set_protocol(uint8_t protocol) { hid_protocol = protocol; }
 #endif /* IS_ENABLED(CONFIG_ZMK_USB_BOOT) */
 
+bool zmk_usb_hid_is_boot_protocol(void) {
+#if IS_ENABLED(CONFIG_ZMK_USB_BOOT)
+    return hid_protocol == HID_PROTOCOL_BOOT;
+#else
+    return false;
+#endif
+}
+
 uint8_t *get_keyboard_report(size_t *len) {
 #if IS_ENABLED(CONFIG_ZMK_USB_BOOT)
     if (hid_protocol != HID_PROTOCOL_REPORT) {
         zmk_hid_boot_report_t *boot_report = zmk_hid_get_boot_report();
-        *len = sizeof(*boot_report);
+        /* A boot keyboard report is exactly 8 bytes (modifiers, reserved, 6 keys). The
+         * report body type is larger than that because its key array is sized for NKRO. */
+        *len = 2 + HID_BOOT_KEY_LEN;
         return (uint8_t *)boot_report;
     }
 #endif
@@ -207,7 +217,9 @@ int zmk_usb_hid_send_report(const uint8_t *report, size_t len) {
         int err = 0;
         // LOG_HEXDUMP_ERR(report,len,"usb");
         // cut reserve byte in nkro report;
-        if (report[0] == ZMK_HID_REPORT_ID_KEYBOARD_NKRO) {
+        /* Boot protocol reports have no report ID: byte 0 is the modifier mask, and
+         * 0x04 there means Left Alt, not the NKRO report ID. */
+        if (!zmk_usb_hid_is_boot_protocol() && report[0] == ZMK_HID_REPORT_ID_KEYBOARD_NKRO) {
             uint8_t buffer[(ZMK_HID_KEYBOARD_NKRO_MAX_USAGE + 1) / 8 + 2];
             buffer[0] = report[0];
             buffer[1] = report[1];
